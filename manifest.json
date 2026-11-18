@@ -1,0 +1,74 @@
+{
+  "manifest_version": "0.2",
+  "name": "understand-this-video",
+  "display_name": "Understand This Video For Me AI Plugin",
+  "version": "1.1.0",
+  "description": "Let your AI watch and hear a video: key frames, transcript and contact sheet, processed locally.",
+  "long_description": "Give your AI a local video file on your computer. It gets timestamped key frames, a transcript (local Whisper when installed) and a contact-sheet image. This plugin does not download videos from the internet. Requires ffmpeg and a $49 lifetime license.",
+  "author": {
+    "name": "Ship Monthly",
+    "email": "video@shipmonthly.com",
+    "url": "https://understandvideo.shipmonthly.com"
+  },
+  "homepage": "https://understandvideo.shipmonthly.com",
+  "support": "mailto:video@shipmonthly.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/africaappstudio-max/video-context-ai-download"
+  },
+  "icon": "icon.png",
+  "license": "Proprietary",
+  "privacy_policies": [
+    "https://understandvideo.shipmonthly.com/privacy"
+  ],
+  "keywords": [
+    "video",
+    "transcript",
+    "frames",
+    "whisper"
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "mcp_server.py",
+    "mcp_config": {
+      "command": "python3",
+      "args": [
+        "${__dirname}/mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "${__dirname}",
+        "VIDEO_CONTEXT_LICENSE_KEY": "${user_config.license_key}"
+      },
+      "platform_overrides": {
+        "win32": {
+          "command": "python"
+        }
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "understand_this_video",
+      "description": "Watch and hear a local video file: key frames, transcript, contact sheet."
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.9"
+    }
+  },
+  "user_config": {
+    "license_key": {
+      "type": "string",
+      "title": "License key",
+      "description": "The license key from your purchase email. Buy one at https://understandvideo.shipmonthly.com",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

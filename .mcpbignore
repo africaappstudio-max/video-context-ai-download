@@ -1,0 +1,11 @@
+Dockerfile
+.dockerignore
+.cursor/
+.claude-plugin/
+glama.json
+server.json
+assets/logo.svg
+install.*
+*.mcpb
+.git/
+__pycache__/

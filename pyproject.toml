@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-context-ai"
+version = "1.1.0"
+description = "Understand This Video For Me AI Plugin: let any AI 'watch' a video: small timestamped key frames, transcript, contact sheet and a single context.md. CLI + MCP server."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+keywords = ["video", "llm", "mcp", "claude", "chatgpt", "grok", "whisper", "frames", "transcript"]
+dependencies = ["faster-whisper>=1.0"]
+
+[project.optional-dependencies]
+transcribe = ["faster-whisper>=1.0"]
+all = ["faster-whisper>=1.0"]
+
+[project.scripts]
+understand-this-video = "video_context:main"
+understand-this-video-mcp = "mcp_server:main"
+video-context = "video_context:main"
+video-context-mcp = "mcp_server:main"  # old names kept for existing installs
+
+[tool.setuptools]
+py-modules = ["video_context", "mcp_server", "licensing"]

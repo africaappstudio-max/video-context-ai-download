@@ -1,0 +1,2 @@
+# Installed automatically by install.sh / install.ps1. Requires ffmpeg + ffprobe on PATH.
+faster-whisper>=1.0   # transcript.txt (model 'small', falls back to 'base')

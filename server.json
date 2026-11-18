@@ -1,0 +1,13 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.africaappstudio-max/understand-this-video",
+  "title": "Understand This Video For Me AI Plugin",
+  "description": "Let your AI watch and hear a video: key frames, transcript and contact sheet, processed locally.",
+  "repository": {
+    "url": "https://github.com/africaappstudio-max/video-context-ai-download",
+    "source": "github"
+  },
+  "websiteUrl": "https://understandvideo.shipmonthly.com",
+  "version": "1.1.0",
+  "packages": []
+}

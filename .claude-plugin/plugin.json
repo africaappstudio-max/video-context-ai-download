@@ -1,0 +1,14 @@
+{
+  "name": "understand-this-video",
+  "displayName": "Understand This Video For Me AI Plugin",
+  "description": "Let your AI watch and hear a local video file: key frames, timestamped transcript and a contact sheet, processed locally. This plugin does not download videos from the internet.",
+  "version": "1.1.0",
+  "author": {
+    "name": "Ship Monthly",
+    "email": "video@shipmonthly.com"
+  },
+  "homepage": "https://understandvideo.shipmonthly.com",
+  "repository": "https://github.com/africaappstudio-max/video-context-ai-download",
+  "license": "SEE LICENSE IN LICENSE",
+  "mcpServers": "./.mcp.json"
+}

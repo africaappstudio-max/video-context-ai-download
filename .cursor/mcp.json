@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "understand-this-video": {
+      "command": "understand-this-video-mcp",
+      "args": []
+    }
+  }
+}
