@@ -21,20 +21,14 @@ No refunds for change of mind. If it won't work on your computer, email me withi
 
 You need your **license key** (it's in your purchase email). Buy one at https://understandvideo.shipmonthly.com. Works on Mac and Windows.
 
-**Step 0 for everyone: run the installer once.** It adds everything the plugin needs (ffmpeg, Python, the transcript tools), registers Claude Desktop and Cursor for you, and asks for your license key.
+**Install in 3 steps (no Terminal):**
+1. **Download the installer** for your computer: [Mac](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.1/Install-Understand-This-Video-Mac.zip) or [Windows](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.1/Install-Understand-This-Video-Windows.bat), then double-click it. *Mac:* if it says the file can't be opened, right-click it, choose **Open**, then **Open** again. *Windows:* if a blue box appears, click **More info**, then **Run anyway**.
+2. **Paste your license key** in the box that pops up (it is in your purchase email). The installer adds everything else for you (ffmpeg, Python, transcript tools).
+3. **Open your AI app.** Claude Desktop, Cursor, Claude Code, Windsurf and Gemini CLI are already connected. Quit and reopen the app, then ask: `Understand this video for me: ~/Desktop/My Video.mp4`.
 
-Download version **1.2.0** (the current version): [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip).
+The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-context\app`). Details for each app are below and on the [help page](https://understandvideo.shipmonthly.com/help.html). An install log is saved at `~/.video-context/install.log`.
 
-- **Mac**
-  1. Download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip) and double-click it to unzip.
-  2. Open **Terminal** (press Cmd+Space, type *Terminal*, press Enter). Type `cd ` (with a space after it), drag the unzipped folder into the Terminal window, press Enter.
-  3. Type `bash install.sh` and press Enter. When it asks, paste your license key and press Enter.
-- **Windows**
-  1. Download the same [ZIP](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip), then right-click it and choose **Extract All**.
-  2. Open the extracted folder, right-click `install.ps1`, choose **Run with PowerShell**.
-  3. When it asks, paste your license key and press Enter.
-
-When it says "Done", the plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-context\app`). Now follow the section for your app. To activate later instead: `understand-this-video activate YOUR-KEY`.
+*Advanced:* download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.1/video-context-ai.zip) and run `bash install.sh` (Mac) or `install.ps1` (Windows).
 
 **The path the other apps need** (replace YOURNAME with your computer user name):
 - Mac: `/Users/YOURNAME/.video-context/app/bin/understand-this-video-mcp`
@@ -77,7 +71,7 @@ When it says "Done", the plugin lives in `~/.video-context/app` (Windows: `C:\Us
 Grok Bot works on its own cloud computer, so it can't use a program on your laptop. You ask the Bot to set the plugin up on *its* computer. It then works on video files you give the Bot (not on files that stay on your laptop, and not on video website links).
 1. Open a chat with your Bot.
 2. Send this message:
-   > Please install the Understand This Video plugin on your own computer: download https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip, unzip it, install ffmpeg if it's missing, then run `pip install .` from the unzipped folder. Then add a command (stdio) MCP server named "Understand This Video" with the command `understand-this-video-mcp`. Ask me for my license key with a secure secret request (never in chat or in the command), then run `understand-this-video activate` with it.
+   > Please install the Understand This Video plugin on your own computer: download https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.1/video-context-ai.zip, unzip it, install ffmpeg if it's missing, then run `pip install .` from the unzipped folder. Then add a command (stdio) MCP server named "Understand This Video" with the command `understand-this-video-mcp`. Ask me for my license key with a secure secret request (never in chat or in the command), then run `understand-this-video activate` with it.
 3. When the Bot asks for the key, enter it in the secure box it shows.
 
 **How to check it works:** ask the Bot "Which tools does Understand This Video have?" It should name `understand_this_video`. Then give it a video file and ask what happens in it.
