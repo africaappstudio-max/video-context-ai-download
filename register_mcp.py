@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register (or remove) the Understand This Video For Me MCP server in Claude Desktop and Cursor configs.
+"""Register (or remove) the Understand This Video MCP server in Claude Desktop and Cursor configs.
 Usage: python register_mcp.py <path-to-understand-this-video-mcp> [--remove]
 Existing configs are backed up (*.bak) and merged, never overwritten."""
 import json
@@ -8,8 +8,8 @@ import shutil
 import sys
 from pathlib import Path
 
-NAME = "Understand This Video For Me"
-OLD_NAMES = ("video-context",)
+NAME = "Understand This Video"
+OLD_NAMES = ("video-context", "Understand This Video For Me")
 
 
 def config_paths():
@@ -20,7 +20,15 @@ def config_paths():
         claude = Path(os.environ.get("APPDATA", str(home / "AppData/Roaming"))) / "Claude/claude_desktop_config.json"
     else:
         claude = home / ".config/Claude/claude_desktop_config.json"
-    return {"Claude Desktop": claude, "Cursor": home / ".cursor/mcp.json"}
+    paths = {"Claude Desktop": claude, "Cursor": home / ".cursor/mcp.json"}
+    # Other apps: only registered if the app's config folder already exists (i.e. it is installed)
+    optional = {"Windsurf": home / ".codeium/windsurf/mcp_config.json",
+                "Gemini CLI": home / ".gemini/settings.json",
+                "Cline (VS Code)": None}
+    for app, path in optional.items():
+        if path is not None and path.parent.exists():
+            paths[app] = path
+    return paths
 
 
 def update(path, entry, remove=False):
@@ -59,6 +67,15 @@ def main():
     for app, path in config_paths().items():
         if update(path, entry, remove):
             print("  %s %s: %s" % ("Removed from" if remove else "Registered in", app, path))
+    claude = shutil.which("claude")
+    if claude:  # Claude Code
+        import subprocess
+        subprocess.call([claude, "mcp", "remove", "--scope", "user", NAME],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if not remove:
+            rc = subprocess.call([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("  %s Claude Code" % ("Registered in" if rc == 0 else "Could not register in"))
     if not remove:
         print("  Grok Bot / other MCP clients: add a stdio server with command:\n    %s" % cmd)
 

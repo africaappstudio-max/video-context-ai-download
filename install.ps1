@@ -1,15 +1,21 @@
-# Understand This Video For Me AI Plugin installer for Windows. Run in PowerShell:
-#   powershell -ExecutionPolicy Bypass -File install.ps1
+# Understand This Video Plugin installer for Windows. Normally started by "Install Understand This Video (Windows).bat".
+#   advanced: powershell -ExecutionPolicy Bypass -File install.ps1
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName Microsoft.VisualBasic
+Add-Type -AssemblyName System.Windows.Forms
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $App = Join-Path $env:USERPROFILE ".video-context\app"
-Write-Host "== Understand This Video For Me AI Plugin installer =="
-
+$Title = "Understand This Video Plugin"
+New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE ".video-context") | Out-Null
+Start-Transcript -Path (Join-Path $env:USERPROFILE ".video-context\install.log") -Append | Out-Null
+Write-Host "== $Title installer =="
+function Note($m) { [void][System.Windows.Forms.MessageBox]::Show($m, $Title) }
 function Refresh-Path {
   $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
 }
+try {
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-  Write-Host "winget not found. Install 'App Installer' from the Microsoft Store, then re-run."; exit 1
+  Note "Windows needs the free 'App Installer' from the Microsoft Store first. Install it, then run this installer again."; exit 1
 }
 if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
   Write-Host "Installing ffmpeg..."
@@ -25,20 +31,21 @@ if (-not $py -or ($py.Source -like "*WindowsApps*")) {
   $py = Get-Command py -ErrorAction SilentlyContinue
   if (-not $py) { $py = Get-Command python }
 }
-Write-Host "Installing Understand This Video For Me AI Plugin into $App ..."
+Write-Host "Installing the plugin into $App ..."
 & $py.Source -m venv $App
 & "$App\Scripts\python.exe" -m pip install -q --upgrade pip
 & "$App\Scripts\pip.exe" install -q "$Here[all]"
 
-# make sure the GUI apps can find ffmpeg
 $ff = Get-Command ffmpeg -ErrorAction SilentlyContinue
 if ($ff) { $env:Path = (Split-Path $ff.Source) + ";" + $env:Path }
-Write-Host "Registering with Claude Desktop and Cursor..."
+Write-Host "Connecting your AI apps..."
 & "$App\Scripts\python.exe" "$Here\register_mcp.py" "$App\Scripts\understand-this-video-mcp.exe"
 
 $Key = $env:VIDEO_CONTEXT_LICENSE_KEY
-if (-not $Key) { $Key = Read-Host "Paste your license key (from your purchase email)" }
-if ($Key) { & "$App\Scripts\understand-this-video.exe" activate $Key }
-else { Write-Host "Later, activate with: $App\Scripts\understand-this-video.exe activate YOUR-KEY" }
-Write-Host ""
-Write-Host "Done! Restart Claude Desktop / Cursor, then ask: 'Watch C:\path\video.mp4 and summarize it'."
+if (-not $Key) { $Key = [Microsoft.VisualBasic.Interaction]::InputBox("Paste your license key (it is in your purchase email) and click OK.`nNo key yet? Click Cancel and run this installer again later.", $Title, "") }
+if ($Key) {
+  & "$App\Scripts\understand-this-video.exe" activate $Key.Trim()
+  if ($LASTEXITCODE -eq 0) { Note "All set! Close and reopen your AI app (Claude, Cursor...), then ask: Understand this video for me: C:\Users\you\Desktop\My Video.mp4" }
+  else { Note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com." }
+} else { Note "Installed. Run this installer again whenever you want to enter your license key." }
+} catch { Note ("Something went wrong: " + $_.Exception.Message + "`nDetails: %USERPROFILE%\.video-context\install.log. Email video@shipmonthly.com for help."); exit 1 }
