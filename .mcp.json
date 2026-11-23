@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "understand-this-video": {
-      "command": "python3",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp_server.py"]
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/africaappstudio-max/video-context-ai-download", "understand-this-video-mcp"]
     }
   }
 }
