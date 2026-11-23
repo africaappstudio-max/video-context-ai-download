@@ -1,7 +1,6 @@
 #!/bin/bash
 # Double-click installer for macOS. First time: right-click this file > Open > Open (Apple's unidentified-developer check).
-VER="1.2.1"
-BASE="https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v$VER"
+BASE="https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download"
 DEST="$HOME/.video-context/src"
 clear
 echo "Understand This Video Plugin: installing. Please wait, this takes a few minutes."

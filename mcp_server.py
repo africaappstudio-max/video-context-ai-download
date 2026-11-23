@@ -91,7 +91,7 @@ def handle(msg):
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.1"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.2"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":
