@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Understand This Video For Me AI Plugin: turn a video into a small set of key frames + compressed audio
+Understand This Video Plugin: turn a video into a small set of key frames + compressed audio
 (+ optional timestamped transcript) that any AI agent can read.
 
 Usage:
@@ -274,7 +274,7 @@ def contact_sheet(frames_dir, out_path, cols=4, cell=256):
 
 
 def write_context_md(out, title, duration, frames, segs, lang, transcript_note, sheet):
-    lines = ["# Understand This Video For Me: %s" % title, "",
+    lines = ["# Understand This Video: %s" % title, "",
              "- Duration: %s (%.1fs)" % (fmt(duration), duration),
              "- Frames: %d (files in frames/, chronological)" % len(frames),
              "- Transcript: %s%s" % (transcript_note, (", language: %s" % lang) if lang else ""),
@@ -297,22 +297,24 @@ def write_context_md(out, title, duration, frames, segs, lang, transcript_note, 
 
 def make_parser():
     ap = argparse.ArgumentParser(prog="understand-this-video",
-                                 description="Understand This Video For Me AI Plugin: turn a video "
+                                 description="Understand This Video Plugin: turn a video "
                                              "into timestamped key frames + transcript for AI agents")
     ap.add_argument("video", help="local video file path")
     ap.add_argument("--out", default="understand_this_video_output")
     ap.add_argument("--scene", action="store_true", help="scene detection (+interval fill if too few)")
     ap.add_argument("--threshold", type=float, default=0.3, help="scene threshold 0-1")
     ap.add_argument("--interval", type=float, default=3.0, help="seconds between interval frames")
-    ap.add_argument("--min-frames", type=int, default=8)
-    ap.add_argument("--max-frames", type=int, default=20)
-    ap.add_argument("--max-side", type=int, default=768, help="max long side of frames in px")
-    ap.add_argument("--quality", type=int, default=5, help="ffmpeg JPEG q:v (2=best, 31=worst)")
+    ap.add_argument("--min-frames", type=int, default=6)
+    ap.add_argument("--max-frames", type=int, default=12)
+    ap.add_argument("--max-side", type=int, default=512, help="max long side of frames in px")
+    ap.add_argument("--quality", type=int, default=8, help="ffmpeg JPEG q:v (2=best, 31=worst)")
     ap.add_argument("--wav", action="store_true", help="write uncompressed audio.wav instead of .m4a")
     ap.add_argument("--no-audio", action="store_true", help="don't keep an audio file")
     ap.add_argument("--no-transcript", action="store_true")
     ap.add_argument("--whisper-model", default="small", help="falls back to base if unavailable")
     ap.add_argument("--language", default=None, help="force language code (default: auto-detect)")
+    ap.add_argument("--transcript-only", action="store_true",
+                    help="no frames or contact sheet: speech transcript only (cheapest)")
     ap.add_argument("--no-sheet", action="store_true", help="skip contact-sheet grid image")
     return ap
 
@@ -342,21 +344,23 @@ def build(a):
             (out / old).unlink()
 
     print("Processing: %s (%.1fs, audio=%s)" % (title, duration, has_audio))
-    min_gap = max(0.5, min(1.0, duration / 40.0)) if duration else 0.5
-    times, n_scene = pick_times(source, duration, a.scene, a.interval, a.min_frames,
-                                a.max_frames, a.threshold, min_gap)
-    deduped = dedupe_visual(source, times, tol=4.0)
-    if len(deduped) < a.min_frames:  # static footage: only drop true duplicates
-        deduped = dedupe_visual(source, times, tol=1.0)
-    times = downsample(deduped, a.max_frames)
+    frames, sheet = [], None
+    if not getattr(a, "transcript_only", False):
+        min_gap = max(0.5, min(1.0, duration / 40.0)) if duration else 0.5
+        times, n_scene = pick_times(source, duration, a.scene, a.interval, a.min_frames,
+                                    a.max_frames, a.threshold, min_gap)
+        deduped = dedupe_visual(source, times, tol=4.0)
+        if len(deduped) < a.min_frames:  # static footage: only drop true duplicates
+            deduped = dedupe_visual(source, times, tol=1.0)
+        times = downsample(deduped, a.max_frames)
 
-    frames = []
-    for i, t in enumerate(times, 1):
-        p = frames_dir / ("frame_%04d_t%.1fs.jpg" % (i, t))
-        extract_frame(source, t, p, a.max_side, a.quality)
-        frames.append({"file": "frames/" + p.name, "time_s": round(t, 2), "bytes": p.stat().st_size})
-    print("Frames: %d (scene candidates: %s)" % (len(frames), n_scene if a.scene else "n/a"))
-    sheet = None if a.no_sheet else contact_sheet(frames_dir, out / "contact_sheet.jpg")
+        frames = []
+        for i, t in enumerate(times, 1):
+            p = frames_dir / ("frame_%04d_t%.1fs.jpg" % (i, t))
+            extract_frame(source, t, p, a.max_side, a.quality)
+            frames.append({"file": "frames/" + p.name, "time_s": round(t, 2), "bytes": p.stat().st_size})
+        print("Frames: %d (scene candidates: %s)" % (len(frames), n_scene if a.scene else "n/a"))
+        sheet = None if a.no_sheet else contact_sheet(frames_dir, out / "contact_sheet.jpg")
 
     audio, tpath, segs, lang = None, None, [], None
     if a.no_transcript:
@@ -377,7 +381,10 @@ def build(a):
     print("Audio: %s | Transcript: %s" % (audio.name if audio else "none", note))
     ctx = write_context_md(out, title, duration, frames, segs, lang, note, sheet)
 
-    instructions = ("Read context.md first: it interleaves timestamped frames and speech. "
+    if not frames:
+        instructions = "Read context.md: it holds the timestamped speech transcript (transcript-only mode, no frames)."
+    else:
+      instructions = ("Read context.md first: it interleaves timestamped frames and speech. "
                     "View the referenced frames (or contact_sheet.jpg for a one-image overview).")
     with open(out / "README.txt", "w") as f:
         f.write(instructions + "\n")

@@ -1,4 +1,4 @@
-# Privacy Policy: Understand This Video For Me AI Plugin
+# Privacy Policy: Understand This Video Plugin
 
 Full policy: https://understandvideo.shipmonthly.com/privacy
 

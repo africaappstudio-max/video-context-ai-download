@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Understand This Video For Me AI Plugin: stdlib MCP server (stdio, JSON-RPC 2.0).
+"""Understand This Video Plugin: stdlib MCP server (stdio, JSON-RPC 2.0).
 
 Tools:
   understand_this_video(source, out?, max_frames?, transcript?, include_images?)
       -> context.md text (+ contact-sheet image) and output folder path.
   (The old name "video_context" is still accepted as a hidden alias.)
-Register e.g.:  claude mcp add "Understand This Video For Me" -- understand-this-video-mcp
+Register e.g.:  claude mcp add "Understand This Video" -- understand-this-video-mcp
 """
 import base64
 import contextlib
@@ -24,8 +24,8 @@ TOOL_NAME = "understand_this_video"
 HIDDEN_ALIASES = ("video_context",)  # old name; still callable, never listed
 TOOLS = [{
     "name": "understand_this_video",
-    "title": "Understand This Video For Me",
-    "description": ("Understand This Video For Me: lets the AI watch AND hear a local video file: extracts timestamped key frames, a transcript "
+    "title": "Understand This Video",
+    "description": ("Understand This Video: lets the AI watch AND hear a local video file: extracts timestamped key frames, a transcript "
                     "(local Whisper) and a contact-sheet image from a file path on your computer. "
                     "It does not download videos from the internet. Returns a timeline "
                     "(context.md) plus the overview image; individual frames are on disk."),
@@ -34,7 +34,10 @@ TOOLS = [{
         "properties": {
             "source": {"type": "string", "description": "Local video file path (e.g. ~/Desktop/My Video.mp4; spaces fine, no quotes needed). URLs are not accepted."},
             "out": {"type": "string", "description": "Output folder (default: temp dir)"},
-            "max_frames": {"type": "integer", "default": 20},
+            "max_frames": {"type": "integer", "default": 12, "description": "Max key frames (default 12; raise for more detail, costs more tokens)"},
+            "max_side": {"type": "integer", "default": 512, "description": "Longest frame side in px (default 512)"},
+            "transcript_only": {"type": "boolean", "default": False,
+                                "description": "Speech transcript only, no frames or images (cheapest)"},
             "transcript": {"type": "boolean", "default": True},
             "include_images": {"type": "boolean", "default": True,
                                "description": "Return contact sheet image inline"},
@@ -56,10 +59,13 @@ def call_tool(args):
         return {"isError": True, "content": [{"type": "text", "text": "License error: %s" % e}]}
     src = args.get("source")
     if not src or not str(src).strip():
-        return _err("Understand This Video For Me: no video given. Pass a local file path as 'source'.")
+        return _err("Understand This Video: no video given. Pass a local file path as 'source'.")
     out = os.path.expanduser(args.get("out") or "") or tempfile.mkdtemp(prefix="understand_this_video_")
     argv = [str(src), "--scene", "--out", out,
-            "--max-frames", str(int(args.get("max_frames", 20)))]
+            "--max-frames", str(int(args.get("max_frames", 12))),
+            "--max-side", str(int(args.get("max_side", 512)))]
+    if args.get("transcript_only"):
+        argv.append("--transcript-only")
     if not args.get("transcript", True):
         argv.append("--no-transcript")
     log = io.StringIO()
@@ -68,9 +74,9 @@ def call_tool(args):
             vc.build(vc.make_parser().parse_args(argv))
     except SystemExit as e:
         detail = e.code if isinstance(e.code, str) else "exit code %s" % e.code
-        return _err("Understand This Video For Me failed: %s\n%s" % (detail, log.getvalue()[-1500:]))
+        return _err("Understand This Video failed: %s\n%s" % (detail, log.getvalue()[-1500:]))
     except Exception as e:
-        return _err("Understand This Video For Me error: %s\n%s" % (e, log.getvalue()[-1500:]))
+        return _err("Understand This Video error: %s\n%s" % (e, log.getvalue()[-1500:]))
     ctx = (Path(out) / "context.md").read_text(encoding="utf-8")
     content = [{"type": "text", "text": "Output folder: %s\n\n%s" % (os.path.abspath(out), ctx)}]
     sheet = Path(out) / "contact_sheet.jpg"
@@ -85,7 +91,7 @@ def handle(msg):
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video For Me AI Plugin", "version": "1.1.0"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.0"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":

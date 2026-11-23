@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "video-context-ai"
-version = "1.1.0"
-description = "Understand This Video For Me AI Plugin: let any AI 'watch' a video: small timestamped key frames, transcript, contact sheet and a single context.md. CLI + MCP server."
+version = "1.2.0"
+description = "Understand This Video Plugin: let any AI 'watch' a video: small timestamped key frames, transcript, contact sheet and a single context.md. CLI + MCP server."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "LicenseRef-Proprietary"

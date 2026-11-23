@@ -3,7 +3,7 @@ name: understand-this-video
 description: Let an AI "watch" a video. Turns a local video file on the user's computer into a small set of timestamped key frames, a timestamped transcript, one contact-sheet image, and a single context.md timeline. Does not download videos from the internet. Use whenever a user asks what a video file shows, wants steps/summary/notes from a video, or asks questions about a recording or tutorial.
 ---
 
-# Understand This Video For Me AI Plugin
+# Understand This Video Plugin
 
 ## When to use
 - The user gives a local video file path and asks about its contents (summary, steps, bugs, Q&A).
@@ -11,7 +11,7 @@ description: Let an AI "watch" a video. Turns a local video file on the user's c
 - If the user gives a video URL, tell them this plugin only processes video files on their computer. They should download or export the video first, then give you the file path.
 
 ## Requirements
-- An Understand This Video For Me license (activated once by the installer, or `understand-this-video activate KEY`).
+- An Understand This Video license (activated once by the installer, or `understand-this-video activate KEY`).
   Exit code 5 / "License error" means not activated: tell the user to activate, don't retry.
 - `ffmpeg` + `ffprobe` (found on PATH or in /opt/homebrew/bin, /usr/local/bin) (macOS `brew install ffmpeg`, Ubuntu `sudo apt install ffmpeg`, Windows `winget install ffmpeg`).
 - Python 3.9+. Installed by `install.sh` / `install.ps1` (ffmpeg, faster-whisper).
@@ -21,7 +21,8 @@ description: Let an AI "watch" a video. Turns a local video file on the user's c
 understand-this-video "/path/to/video.mp4" --scene --out understand_this_video_output
 # or, if pip-installed:  understand-this-video "/path/to/video.mp4" --scene
 ```
-Useful flags: `--max-frames 20`, `--min-frames 8`, `--whisper-model small` (falls back to base),
+Defaults are token-light: 12 frames max, 512 px, quality 8. For speech-only videos use `--transcript-only` (no frames).
+Useful flags: `--max-frames 12`, `--min-frames 6`, `--max-side 512`, `--quality 8`, `--transcript-only`, `--whisper-model small` (falls back to base),
 `--language en` (default auto-detect), `--no-transcript`, `--wav`, `--no-audio`,
 `--no-sheet`.
 Exit codes: 2 = ffmpeg missing, 5 = license.

@@ -1,4 +1,4 @@
-"""License-key check for Understand This Video For Me AI Plugin (Freemius or Lemon Squeezy license APIs).
+"""License-key check for Understand This Video Plugin (Freemius or Lemon Squeezy license APIs).
 
 First use: key is activated online (one activation per machine) and cached in
 ~/.video-context/license.json. Afterwards it works offline; it re-validates
@@ -70,9 +70,9 @@ def _post(endpoint, data):
 def _check_product(resp):
     meta = resp.get("meta") or {}
     if STORE_ID and meta.get("store_id") != STORE_ID:
-        raise LicenseError("this key is not for Understand This Video For Me")
+        raise LicenseError("this key is not for Understand This Video")
     if PRODUCT_ID and meta.get("product_id") != PRODUCT_ID:
-        raise LicenseError("this key is not for Understand This Video For Me")
+        raise LicenseError("this key is not for Understand This Video")
 
 
 def _load():
@@ -138,7 +138,7 @@ def _fs_activate(key):
     if not r.get("install_id"):
         raise LicenseError("activation failed")
     if r.get("license_plan_id") and str(r["license_plan_id"]) != str(FS_PLAN_ID):
-        raise LicenseError("this key is not for Understand This Video For Me")
+        raise LicenseError("this key is not for Understand This Video")
     _save({"key": key, "instance_id": str(r["install_id"]), "checked": time.time(),
            "customer": ""})
     return {"meta": {}}
