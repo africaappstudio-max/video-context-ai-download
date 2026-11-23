@@ -4,7 +4,7 @@
 
 **Let any AI watch and hear a video.** Give Claude, Cursor, Grok Bot or any MCP client a video file on your computer, and it gets back what it can actually read:
 
-- 8–20 **timestamped key frames** (scene changes, duplicates removed, small JPEGs)
+- 6–12 **timestamped key frames** (scene changes, duplicates removed, small JPEGs)
 - a **timestamped transcript** (local Whisper)
 - one **contact-sheet image** with all frames in a grid
 - one `context.md` timeline mixing what was shown and what was said
@@ -23,14 +23,14 @@ You need your **license key** (it's in your purchase email). Buy one at https://
 
 **Step 0 for everyone: run the installer once.** It adds everything the plugin needs (ffmpeg, Python, the transcript tools), registers Claude Desktop and Cursor for you, and asks for your license key.
 
-Download version **1.1.0** (the current Freemius version): [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.1.0/video-context-ai.zip).
+Download version **1.2.0** (the current version): [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip).
 
 - **Mac**
-  1. Download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.1.0/video-context-ai.zip) and double-click it to unzip.
+  1. Download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip) and double-click it to unzip.
   2. Open **Terminal** (press Cmd+Space, type *Terminal*, press Enter). Type `cd ` (with a space after it), drag the unzipped folder into the Terminal window, press Enter.
   3. Type `bash install.sh` and press Enter. When it asks, paste your license key and press Enter.
 - **Windows**
-  1. Download the same [ZIP](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.1.0/video-context-ai.zip), then right-click it and choose **Extract All**.
+  1. Download the same [ZIP](https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip), then right-click it and choose **Extract All**.
   2. Open the extracted folder, right-click `install.ps1`, choose **Run with PowerShell**.
   3. When it asks, paste your license key and press Enter.
 
@@ -77,7 +77,7 @@ When it says "Done", the plugin lives in `~/.video-context/app` (Windows: `C:\Us
 Grok Bot works on its own cloud computer, so it can't use a program on your laptop. You ask the Bot to set the plugin up on *its* computer. It then works on video files you give the Bot (not on files that stay on your laptop, and not on video website links).
 1. Open a chat with your Bot.
 2. Send this message:
-   > Please install the Understand This Video plugin on your own computer: download https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.1.0/video-context-ai.zip, unzip it, install ffmpeg if it's missing, then run `pip install .` from the unzipped folder. Then add a command (stdio) MCP server named "Understand This Video" with the command `understand-this-video-mcp`. Ask me for my license key with a secure secret request (never in chat or in the command), then run `understand-this-video activate` with it.
+   > Please install the Understand This Video plugin on your own computer: download https://github.com/africaappstudio-max/video-context-ai-download/releases/download/v1.2.0/video-context-ai.zip, unzip it, install ffmpeg if it's missing, then run `pip install .` from the unzipped folder. Then add a command (stdio) MCP server named "Understand This Video" with the command `understand-this-video-mcp`. Ask me for my license key with a secure secret request (never in chat or in the command), then run `understand-this-video activate` with it.
 3. When the Bot asks for the key, enter it in the secure box it shows.
 
 **How to check it works:** ask the Bot "Which tools does Understand This Video have?" It should name `understand_this_video`. Then give it a video file and ask what happens in it.
