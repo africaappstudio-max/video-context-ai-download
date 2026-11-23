@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 NAME = "Understand This Video"
+CLI_NAME = "understand-this-video"  # Claude Code only allows letters, numbers, - and _
 OLD_NAMES = ("video-context", "Understand This Video For Me")
 
 
@@ -70,10 +71,10 @@ def main():
     claude = shutil.which("claude")
     if claude:  # Claude Code
         import subprocess
-        subprocess.call([claude, "mcp", "remove", "--scope", "user", NAME],
+        subprocess.call([claude, "mcp", "remove", "--scope", "user", CLI_NAME],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if not remove:
-            rc = subprocess.call([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd],
+            rc = subprocess.call([claude, "mcp", "add", "--scope", "user", CLI_NAME, "--", cmd],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print("  %s Claude Code" % ("Registered in" if rc == 0 else "Could not register in"))
     if not remove:

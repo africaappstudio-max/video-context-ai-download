@@ -419,6 +419,8 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if licensing.cli(argv):
         return
+    if any(a in ("-h", "--help") for a in argv):
+        make_parser().parse_args(["--help"])  # help needs no license
     try:
         licensing.require_license()
     except licensing.LicenseError as e:
