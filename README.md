@@ -72,7 +72,7 @@ The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-c
 }
 ```
 
-**How to check it works:** in Cursor Settings, "Understand This Video" has a green dot. In the Agent chat type `Understand this video for me: /path/to/video.mp4`.
+**How to check it works:** in Cursor Settings, "Understand This Video" has a green dot. In the Agent chat type `Understand my latest video` (or the file name).
 
 ### Claude Code
 1. Run the installer above.
