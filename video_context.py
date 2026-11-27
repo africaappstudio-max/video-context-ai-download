@@ -610,6 +610,20 @@ def pick_model(duration, requested):
     return "tiny"
 
 
+
+def model_on_disk(size):
+    """True if the speech model is already downloaded (no network, no full load)."""
+    home = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface"))
+    hub = home / "hub" / ("models--Systran--faster-whisper-%s" % size)
+    if not hub.is_dir():
+        return False
+    # A completed snapshot has the CTranslate2 model.bin (or model.safetensors)
+    for pat in ("**/model.bin", "**/model.safetensors"):
+        if any(hub.glob(pat)):
+            return True
+    return False
+
+
 def get_model(size):
     """Load a faster-whisper model once per process and keep it (loading is the slow part).
     First tries only the files already on disk (no network check, so no waiting on a bad connection)."""
@@ -667,10 +681,10 @@ def transcribe(audio, out_dir, model_size, language=None):
 
 
 def warmup(models=("small", "base")):
-    """One-time setup run by the installer: download every model/tool now so the first real video is fast."""
+    """One-time setup run by the installer: download every model/tool now so the first real video is fast.
+    Re-runs skip the big downloads when the speech models are already on this computer."""
     t0 = time.time()
     ensure_path()
-    print("Getting the video tools ready (one time).", flush=True)
     ok = True
     try:
         check_tools()
@@ -684,34 +698,39 @@ def warmup(models=("small", "base")):
     except ImportError:
         print("  faster-whisper is not installed", flush=True)
         return False
-    for size in models:
+    missing = [size for size in models if not model_on_disk(size)]
+    if not missing:
+        print("Speech models already on this computer. Skipping the download.", flush=True)
+    else:
+        print("Getting the video tools ready (one time).", flush=True)
+        for size in models:
+            try:
+                get_model(size)
+                print("  speech model '%s': ready" % size, flush=True)
+            except Exception as e:
+                print("  speech model '%s' could not be downloaded (%s). It will be tried again the first time you use it." % (size, e), flush=True)
+                if size == models[0]:
+                    ok = False
+        # tiny warm-up only on first download, so caches/codecs are hot
         try:
-            get_model(size)
-            print("  speech model '%s': ready" % size, flush=True)
+            import numpy as np  # type: ignore
+            m = get_model(models[0])
+            it, _ = m.transcribe(np.zeros(16000, dtype=np.float32), vad_filter=False, beam_size=1)
+            list(it)
+            print("  warm-up transcription: ok", flush=True)
         except Exception as e:
-            print("  speech model '%s' could not be downloaded (%s). It will be tried again the first time you use it." % (size, e), flush=True)
-            if size == models[0]:
-                ok = False
-    # tiny warm-up: transcribe 1 second of silence and cut 1 frame from a test clip so caches/codecs are hot
-    try:
-        import numpy as np  # type: ignore
-        m = get_model(models[0])
-        it, _ = m.transcribe(np.zeros(16000, dtype=np.float32), vad_filter=False, beam_size=1)
-        list(it)
-        print("  warm-up transcription: ok", flush=True)
-    except Exception as e:
-        print("  warm-up transcription skipped (%s)" % e, flush=True)
-    try:
-        import tempfile
-        with tempfile.TemporaryDirectory() as td:
-            clip = os.path.join(td, "t.mp4")
-            run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=d=1:s=160x120:r=10",
-                 "-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono", "-t", "1", "-shortest", clip])
-            probe(clip)
-            extract_frame(clip, 0.5, Path(td) / "f.jpg", 128, 8)
-        print("  warm-up frame cut: ok", flush=True)
-    except Exception as e:
-        print("  warm-up frame cut skipped (%s)" % e, flush=True)
+            print("  warm-up transcription skipped (%s)" % e, flush=True)
+        try:
+            import tempfile
+            with tempfile.TemporaryDirectory() as td:
+                clip = os.path.join(td, "t.mp4")
+                run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=d=1:s=160x120:r=10",
+                     "-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono", "-t", "1", "-shortest", clip])
+                probe(clip)
+                extract_frame(clip, 0.5, Path(td) / "f.jpg", 128, 8)
+            print("  warm-up frame cut: ok", flush=True)
+        except Exception as e:
+            print("  warm-up frame cut skipped (%s)" % e, flush=True)
     folder = ensure_inbox()
     if folder:
         print("  Desktop folder: %s" % folder, flush=True)

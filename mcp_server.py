@@ -94,7 +94,7 @@ def call_tool(args, progress_cb=None):
     try:
         licensing.require_license()
     except licensing.LicenseError as e:
-        return {"isError": True, "content": [{"type": "text", "text": "License error: %s" % e}]}
+        return {"isError": True, "content": [{"type": "text", "text": str(e)}]}
     vc.reset_blocked()
     src = str(args.get("source") or "").strip()
     out = os.path.expanduser(args.get("out") or "") or tempfile.mkdtemp(prefix="understand_this_video_")
@@ -176,7 +176,7 @@ def handle(msg):
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.4"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.5"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":

@@ -11,7 +11,7 @@ description: Let an AI "watch" a video. Turns a local video file on the user's c
 - If the user gives a video URL, tell them this plugin only processes video files on their computer. They should download or export the video first, then put it in the Understand This Video folder on their Desktop.
 
 ## Requirements
-- An Understand This Video license (activated once by the installer, or `understand-this-video activate KEY`).
+- An Understand This Video license (activated once by the installer). If a call says it isn't activated yet, tell the user to run the installer again and paste the key from their purchase email (Mac: `curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash`).
   Exit code 5 / "License error" means not activated: tell the user to activate, don't retry.
 - `ffmpeg` + `ffprobe` (found on PATH or in /opt/homebrew/bin, /usr/local/bin) (macOS `brew install ffmpeg`, Ubuntu `sudo apt install ffmpeg`, Windows `winget install ffmpeg`).
 - Python 3.9+. Installed by `install.sh` / `install.ps1` (ffmpeg, faster-whisper).

@@ -46,21 +46,20 @@ Write-Host "Connecting your AI apps..."
 & "$App\Scripts\python.exe" "$Here\register_mcp.py" "$App\Scripts\understand-this-video-mcp.exe"
 
 $Key = $env:VIDEO_CONTEXT_LICENSE_KEY
-if (-not $Key) { $Key = [Microsoft.VisualBasic.Interaction]::InputBox("Paste your license key (it is in your purchase email) and click OK.`nNo key yet? Click Cancel and run this installer again later.", $Title, "") }
+if (-not $Key) { $Key = [Microsoft.VisualBasic.Interaction]::InputBox("Paste your license key (it is in your purchase email). The plugin will not work without it.`nNo key yet? Click Cancel, then run this installer again when you have it.", $Title, "") }
 $Result = "nokey"
 if ($Key) {
   & "$App\Scripts\understand-this-video.exe" activate $Key.Trim()
   if ($LASTEXITCODE -eq 0) { $Result = "ok" } else { $Result = "badkey" }
 }
 
-# Download everything the plugin needs NOW (speech models, test run), so your first video is fast.
+# Download speech models if needed. Re-runs skip the download when they are already on this computer.
 Write-Host ""
-Write-Host "Getting everything ready so your first video is fast (one time)."
-Write-Host "This downloads the speech models (about 600 MB in total) and can take several minutes on a slow connection."
+Write-Host "Checking the speech models..."
 & "$App\Scripts\understand-this-video.exe" --warmup
 if ($LASTEXITCODE -ne 0) { Write-Host "Some downloads did not finish. The plugin will finish them the first time you use it (it will just be slower once)." }
 
 if ($Result -eq "ok") { Note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then close and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video"; Start-Process explorer.exe $VidFolder }
-elseif ($Result -eq "badkey") { Note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com." }
-else { Note "Installed. Run this installer again whenever you want to enter your license key." }
+elseif ($Result -eq "badkey") { Note "The license key was not accepted. The plugin will not work without a valid key. Check the key in your purchase email and run this installer again, or email video@shipmonthly.com." }
+else { Note "The plugin is installed, but it is not activated yet because you skipped the license key. The plugin will not work without it. Run this installer again and paste the key from your purchase email. Then close and reopen your AI app. No key yet? Get one at https://understandvideo.shipmonthly.com" }
 } catch { Note ("Something went wrong: " + $_.Exception.Message + "`nDetails: %USERPROFILE%\.video-context\install.log. Email video@shipmonthly.com for help."); exit 1 }

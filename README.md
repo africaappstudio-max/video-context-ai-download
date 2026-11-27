@@ -115,7 +115,7 @@ Run the installer first. Then open your app's MCP settings file and paste the sa
 **How to check it works:** the server shows as running or connected in that app's MCP list, and the app lists the tool `understand_this_video`.
 
 ### If something goes wrong
-- *"License error"*: run `understand-this-video activate YOUR-KEY` (Mac: `~/.video-context/app/bin/understand-this-video activate YOUR-KEY`).
+- *"Understand This Video isn't activated yet"*: run the installer again and paste the key from your purchase email (Mac: paste `curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash` in Terminal).
 - *"ffmpeg not found"*: Mac: `brew install ffmpeg`. Windows: `winget install ffmpeg`. Then restart the app.
 - *A video link is rejected*: this plugin only processes video files on your computer. Download or export the video first, put it in the Understand This Video folder on your Desktop, then ask for it by name or say "latest".
 - Still stuck? Email video@shipmonthly.com.

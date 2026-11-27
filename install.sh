@@ -13,10 +13,10 @@ exec > >(tee -a "$LOG") 2>&1
 
 ask_key() {  # pop-up box on macOS, Terminal prompt otherwise. Key is never written to the log.
   if [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1; then
-    osascript -e 'text returned of (display dialog "Paste your license key (it is in your purchase email) and click OK." & return & "No key yet? Click Skip and activate later." with title "Understand This Video Plugin" default answer "" buttons {"Skip","OK"} default button "OK" with icon note)' 2>/dev/null || true
+    osascript -e 'text returned of (display dialog "Paste your license key (it is in your purchase email) and click OK." & return & "The plugin will not work without your license key." & return & "No key yet? Click Skip, then run this installer again when you have it." with title "Understand This Video Plugin" default answer "" buttons {"Skip","OK"} default button "OK" with icon note)' 2>/dev/null || true
   elif [ -r /dev/tty ]; then
     # /dev/tty works when this script is started with curl | bash (stdin is the pipe, not the keyboard).
-    printf "Paste your license key (from your purchase email): " > /dev/tty
+    printf "Paste your license key (it is in your purchase email). The plugin will not work without it: " > /dev/tty
     IFS= read -r K < /dev/tty || true
     printf '%s\n' "$K"
   fi
@@ -61,14 +61,13 @@ RESULT=""
 if [ -n "$KEY" ]; then
   if "$APP/bin/understand-this-video" activate "$KEY"; then RESULT="ok"; else RESULT="badkey"; fi
 else
-  echo "Later, activate with: $APP/bin/understand-this-video activate YOUR-KEY"
+  echo "You skipped the license key. The plugin is installed, but it will not work until you run this installer again and paste the key from your purchase email."
   RESULT="nokey"
 fi
 
-# Download everything the plugin needs NOW (speech models, test run), so your first video is fast.
+# Download speech models if needed. Re-runs skip the download when they are already on this computer.
 echo ""
-echo "Getting everything ready so your first video is fast (one time)."
-echo "This downloads the speech models (about 600 MB in total) and can take several minutes on a slow connection."
+echo "Checking the speech models..."
 if ! "$APP/bin/understand-this-video" --warmup; then
   echo "Some downloads did not finish. The plugin will finish them the first time you use it (it will just be slower once)."
 fi
@@ -78,8 +77,8 @@ case "$RESULT" in
     note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then quit and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video. The first time, your Mac may ask if Claude can access your Desktop folder: click OK."
     [ "$(uname)" = "Darwin" ] && open "$VIDFOLDER" >/dev/null 2>&1 || true ;;
   badkey)
-    note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com." ;;
+    note "The license key was not accepted. The plugin will not work without a valid key. Check the key in your purchase email and run this installer again, or email video@shipmonthly.com." ;;
   *)
-    note "Installed. Run this installer again whenever you want to enter your license key." ;;
+    note "The plugin is installed, but it is not activated yet because you skipped the license key. The plugin will not work without it. Run this installer again and paste the key from your purchase email. Then quit and reopen your AI app. No key yet? Get one at https://understandvideo.shipmonthly.com" ;;
 esac
 echo "Done! Put your video in the \"Understand This Video\" folder on your Desktop, restart Claude Desktop / Cursor, then ask: \"Understand my latest video\"."

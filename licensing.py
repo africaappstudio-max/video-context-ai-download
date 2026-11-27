@@ -192,8 +192,14 @@ def require_license():
     d = _load()
     if d is None or (env_key and env_key != d.get("key")):
         if not env_key:
-            raise LicenseError("no license key. Buy at %s then run: understand-this-video activate YOUR-KEY (or paste the key into this app's settings for the plugin)"
-                               % BUY_URL)
+            raise LicenseError(
+                "Understand This Video isn't activated yet. "
+                "Paste this line into Terminal (Mac) to add your license key: "
+                "curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash. "
+                "On Windows, run the installer again. "
+                "Your key is in your purchase email. "
+                "No key yet? Get one at https://understandvideo.shipmonthly.com"
+            )
         activate(env_key)
         return
     age_days = (time.time() - d["checked"]) / 86400.0
