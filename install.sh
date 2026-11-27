@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Understand This Video Plugin installer for macOS (and Linux). Normally started by the double-click
-# "Install Understand This Video (Mac).command"; advanced users can run:  bash install.sh
+# Understand This Video Plugin installer for macOS (and Linux).
+# Normally started by:  curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash
+# Advanced users can run this file directly:  bash install.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$HOME/.video-context/app"
@@ -10,11 +11,14 @@ echo "== Understand This Video Plugin installer =="
 echo "(details are saved to $LOG)"
 exec > >(tee -a "$LOG") 2>&1
 
-ask_key() {  # pop-up box on macOS, plain prompt elsewhere. Key is never written to the log.
+ask_key() {  # pop-up box on macOS, Terminal prompt otherwise. Key is never written to the log.
   if [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1; then
     osascript -e 'text returned of (display dialog "Paste your license key (it is in your purchase email) and click OK." & return & "No key yet? Click Skip and activate later." with title "Understand This Video Plugin" default answer "" buttons {"Skip","OK"} default button "OK" with icon note)' 2>/dev/null || true
-  elif [ -t 0 ]; then
-    read -r -p "Paste your license key (from your purchase email): " K; echo "$K"
+  elif [ -r /dev/tty ]; then
+    # /dev/tty works when this script is started with curl | bash (stdin is the pipe, not the keyboard).
+    printf "Paste your license key (from your purchase email): " > /dev/tty
+    IFS= read -r K < /dev/tty || true
+    printf '%s\n' "$K"
   fi
 }
 note() { [ "$(uname)" = "Darwin" ] && osascript -e "display dialog \"$1\" with title \"Understand This Video Plugin\" buttons {\"OK\"} default button \"OK\"" >/dev/null 2>&1 || true; }

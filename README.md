@@ -17,18 +17,34 @@ Buy: https://understandvideo.shipmonthly.com
 
 No refunds for change of mind. If it won't work on your computer, email me within 7 days and I'll fix it or refund you.
 
-## Install: pick your app
+## How to install
 
 You need your **license key** (it's in your purchase email). Buy one at https://understandvideo.shipmonthly.com. Works on Mac and Windows.
 
-**Install in 3 steps (no Terminal):**
-1. **Download the installer** for your computer: [Mac](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/Install-Understand-This-Video-Mac.zip) or [Windows](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/Install-Understand-This-Video-Windows.bat), then double-click it. *Mac:* if it says the file can't be opened, right-click it, choose **Open**, then **Open** again. *Windows:* if a blue box appears, click **More info**, then **Run anyway**.
-2. **Paste your license key** in the box that pops up (it is in your purchase email). The installer adds everything else for you (ffmpeg, Python, transcript tools).
-3. **Open your AI app.** Claude Desktop, Cursor, Claude Code, Windsurf and Gemini CLI are already connected. Quit and reopen the app, then ask: `Understand this video for me: ~/Desktop/My Video.mp4`.
+**Pictures of every step:** [How to install](https://understandvideo.shipmonthly.com/#install)
+
+### Mac
+
+1. Press **Cmd+Space**, type **Terminal**, and press Enter.
+2. Paste this line and press Enter:
+
+```bash
+curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash
+```
+
+3. A box will ask for your license key. Paste it and click OK.
+
+### Windows
+
+1. Download the [Windows installer](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/Install-Understand-This-Video-Windows.bat) and double-click it.
+2. If a blue box says "Windows protected your PC", click **More info**, then **Run anyway**.
+3. Paste your license key in the box that pops up and click OK.
+
+Then quit and reopen your AI app. Claude Desktop, Cursor, Claude Code, Windsurf and Gemini CLI are already connected. Ask: `Understand this video for me: ~/Desktop/My Video.mp4`.
 
 The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-context\app`). Details for each app are below and on the [help page](https://understandvideo.shipmonthly.com/help.html). An install log is saved at `~/.video-context/install.log`.
 
-*Advanced:* download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/video-context-ai.zip) and run `bash install.sh` (Mac) or `install.ps1` (Windows).
+*Other options:* there is a [Mac installer file](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/Install-Understand-This-Video-Mac.zip), but Apple often blocks it with a warning, so the one line above is the reliable way. Advanced: download [video-context-ai.zip](https://github.com/africaappstudio-max/video-context-ai-download/releases/latest/download/video-context-ai.zip) and run `bash install.sh` (Mac) or `install.ps1` (Windows).
 
 **The path the other apps need** (replace YOURNAME with your computer user name):
 - Mac: `/Users/YOURNAME/.video-context/app/bin/understand-this-video-mcp`
