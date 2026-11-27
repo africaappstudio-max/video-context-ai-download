@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -56,7 +57,10 @@ TOOLS = [{
     "description": ("List the videos on the user's computer that Understand This Video can read: first the ones in their "
                     "'Understand This Video' Desktop folder (newest first), then recent videos on the Desktop, Downloads, "
                     "Movies/Videos. Use it to see what is there or to pick the right file name. Creates the folder if it is missing."),
-    "inputSchema": {"type": "object", "properties": {}, "required": []},
+    "inputSchema": {"type": "object", "properties": {
+        "include_other_folders": {"type": "boolean", "default": False,
+                                  "description": "Also look in Desktop, Downloads and Movies (default: only the Understand This Video folder, which is instant)"}},
+        "required": []},
 }]
 
 
@@ -64,25 +68,34 @@ def _err(text):
     return {"isError": True, "content": [{"type": "text", "text": text.strip()}]}
 
 
-def list_videos_tool():
+def list_videos_tool(args=None):
+    args = args or {}
+    vc.reset_blocked()
+    vc.begin_budget(vc.LIST_BUDGET)
     folder = vc.ensure_inbox()
-    vids = vc.list_videos(30)
+    vids = vc.list_videos(30, everywhere=bool(args.get("include_other_folders")))
     lines = ["Understand This Video folder: %s" % (folder or "(could not create it on the Desktop)")]
-    if not vids:
-        lines.append("No videos found yet. Ask the user to put a video in that folder (drag it in from anywhere), then ask again.")
+    bm = vc.blocked_message()
+    if bm:
+        lines.append("NOTE: " + bm)
+    if not vids and not bm:
+        lines.append("No videos found yet. Ask the user to put a video in that folder (they can move or save it in from anywhere), then ask again.")
+    import datetime
     for p, size, mt in vids:
-        import datetime
         lines.append("- %s  (%.1f MB, %s)  %s" % (os.path.basename(p), size / 1048576.0,
                      datetime.datetime.fromtimestamp(mt).strftime("%Y-%m-%d %H:%M"), os.path.dirname(p)))
+    if vids and not args.get("include_other_folders") and all(os.path.dirname(v[0]) == os.path.dirname(vids[0][0]) for v in vids):
+        lines.append("(Only the Understand This Video folder was checked. Use include_other_folders=true to also look in Desktop, Downloads and Movies.)")
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
-def call_tool(args):
+def call_tool(args, progress_cb=None):
     import licensing
     try:
         licensing.require_license()
     except licensing.LicenseError as e:
         return {"isError": True, "content": [{"type": "text", "text": "License error: %s" % e}]}
+    vc.reset_blocked()
     src = str(args.get("source") or "").strip()
     out = os.path.expanduser(args.get("out") or "") or tempfile.mkdtemp(prefix="understand_this_video_")
     argv = ([src] if src else []) + ["--scene", "--out", out,
@@ -92,16 +105,22 @@ def call_tool(args):
         argv.append("--transcript-only")
     if not args.get("transcript", True):
         argv.append("--no-transcript")
-    log = io.StringIO()
+    log = []
+
+    def cb(msg):
+        log.append(msg)
+        if progress_cb:
+            progress_cb(msg)
+    vc.set_progress(cb)
     parsed = vc.make_parser().parse_args(argv)
+    tail = lambda: "\n".join(log)[-1500:]  # noqa: E731
     try:
-        with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
-            vc.build(parsed)
+        vc.build(parsed)
     except SystemExit as e:
         detail = e.code if isinstance(e.code, str) else "exit code %s" % e.code
-        return _err("Understand This Video failed: %s\n%s" % (detail, log.getvalue()[-1500:]))
+        return _err("Understand This Video failed: %s\n%s" % (detail, tail()))
     except Exception as e:
-        return _err("Understand This Video error: %s\n%s" % (e, log.getvalue()[-1500:]))
+        return _err("Understand This Video error: %s\n%s" % (e, tail()))
     ctx = (Path(out) / "context.md").read_text(encoding="utf-8")
     note = getattr(parsed, "resolved_note", "")
     head = ("%s: %s\n" % (note, parsed.video)) if note else ""
@@ -113,22 +132,68 @@ def call_tool(args):
     return {"content": content}
 
 
+TIMEOUT_LIST = float(os.environ.get("UTV_LIST_TIMEOUT", "25"))
+TIMEOUT_UNDERSTAND = float(os.environ.get("UTV_TIMEOUT", "1200"))
+_OUT = None
+_OUT_LOCK = threading.Lock()
+
+
+def _send(obj):
+    with _OUT_LOCK:
+        _OUT.write(json.dumps(obj) + "\n")
+        _OUT.flush()
+
+
+def run_tool(name, args, progress_cb=None):
+    """Run a tool with a hard time limit so a stuck folder, popup or model can never freeze the chat."""
+    box = {}
+    secs = TIMEOUT_LIST if name == "list_videos" else TIMEOUT_UNDERSTAND
+
+    def work():
+        try:
+            box["res"] = list_videos_tool(args) if name == "list_videos" else call_tool(args, progress_cb)
+        except BaseException as e:  # noqa
+            box["res"] = _err("Understand This Video error: %s" % e)
+    t = threading.Thread(target=work, daemon=True)
+    t.start()
+    t.join(secs)
+    if t.is_alive():
+        bm = ""
+        try:
+            bm = vc.blocked_message()
+        except Exception:
+            pass
+        if name == "list_videos":
+            return _err("Listing videos took longer than %d seconds and was stopped. %s" % (secs, bm or
+                        "Check that the 'Understand This Video' folder on the Desktop opens in Finder/Explorer, then try again."))
+        return _err("Understand This Video was stopped after %d minutes without finishing. %s Try a shorter video, or "
+                    "ask for 'transcript only'. If this keeps happening, email video@shipmonthly.com." % (secs // 60, bm))
+    return box.get("res") or _err("Understand This Video returned nothing.")
+
+
 def handle(msg):
     method, mid = msg.get("method"), msg.get("id")
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.3"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.4"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":
         p = msg.get("params", {})
-        if p.get("name") == "list_videos":
-            res = list_videos_tool()
-        elif p.get("name") not in (TOOL_NAME,) + HIDDEN_ALIASES:
+        name = p.get("name")
+        if name not in ("list_videos", TOOL_NAME) + HIDDEN_ALIASES:
             return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": "unknown tool"}}
-        else:
-            res = call_tool(p.get("arguments", {}))
+        token = (p.get("_meta") or {}).get("progressToken")
+        counter = [0]
+
+        def pcb(m):
+            if token is None:
+                return
+            counter[0] += 1
+            _send({"jsonrpc": "2.0", "method": "notifications/progress",
+                   "params": {"progressToken": token, "progress": counter[0], "message": m}})
+        res = run_tool("list_videos" if name == "list_videos" else TOOL_NAME, p.get("arguments", {}) or {}, pcb)
     elif method == "ping":
         res = {}
     elif mid is None:  # notification
@@ -138,18 +203,32 @@ def handle(msg):
     return {"jsonrpc": "2.0", "id": mid, "result": res}
 
 
+def _dispatch(msg):
+    try:
+        resp = handle(msg)
+    except Exception as e:
+        resp = {"jsonrpc": "2.0", "id": msg.get("id"), "error": {"code": -32603, "message": str(e)}}
+    if resp is not None:
+        _send(resp)
+
+
 def main():
+    global _OUT
+    _OUT = sys.stdout
+    sys.stdout = sys.stderr   # stray prints must never corrupt the JSON stream
     for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
         try:
-            resp = handle(json.loads(line))
+            msg = json.loads(line)
         except Exception as e:
-            resp = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": str(e)}}
-        if resp is not None:
-            sys.stdout.write(json.dumps(resp) + "\n")
-            sys.stdout.flush()
+            _send({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": str(e)}})
+            continue
+        if msg.get("method") == "tools/call":   # one thread per call: a slow tool never blocks ping/list
+            threading.Thread(target=_dispatch, args=(msg,), daemon=True).start()
+        else:
+            _dispatch(msg)
 
 
 if __name__ == "__main__":

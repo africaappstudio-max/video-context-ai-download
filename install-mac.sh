@@ -35,7 +35,8 @@ cd "$DEST"
 
 say ""
 say "Understand This Video Plugin"
-say "Installing. This takes a few minutes. Please leave this window open."
+say "Installing. This takes several minutes: it also downloads the speech models (about 600 MB) so your first video is fast."
+say "Please leave this window open."
 say ""
 say "Downloading the plugin..."
 TMP="$DEST/plugin.zip"
@@ -61,7 +62,7 @@ if [ "${UTV_STOP_AFTER:-}" = "download" ]; then
   exit 0
 fi
 
-say "Installing (this is the long part)..."
+say "Installing and downloading everything (this is the long part, longer on slow internet)..."
 if [ "$OS" = "Darwin" ]; then
   say "A box will pop up near the end and ask for your license key. Paste it and click OK."
 else

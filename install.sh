@@ -57,15 +57,29 @@ echo "Connecting your AI apps..."
 
 KEY="${VIDEO_CONTEXT_LICENSE_KEY:-}"
 [ -n "$KEY" ] || KEY="$(ask_key)"
+RESULT=""
 if [ -n "$KEY" ]; then
-  if "$APP/bin/understand-this-video" activate "$KEY"; then
-    note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then quit and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video"
-    [ "$(uname)" = "Darwin" ] && open "$VIDFOLDER" >/dev/null 2>&1 || true
-  else
-    note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com."
-  fi
+  if "$APP/bin/understand-this-video" activate "$KEY"; then RESULT="ok"; else RESULT="badkey"; fi
 else
   echo "Later, activate with: $APP/bin/understand-this-video activate YOUR-KEY"
-  note "Installed. Run this installer again whenever you want to enter your license key."
+  RESULT="nokey"
 fi
+
+# Download everything the plugin needs NOW (speech models, test run), so your first video is fast.
+echo ""
+echo "Getting everything ready so your first video is fast (one time)."
+echo "This downloads the speech models (about 600 MB in total) and can take several minutes on a slow connection."
+if ! "$APP/bin/understand-this-video" --warmup; then
+  echo "Some downloads did not finish. The plugin will finish them the first time you use it (it will just be slower once)."
+fi
+
+case "$RESULT" in
+  ok)
+    note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then quit and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video. The first time, your Mac may ask if Claude can access your Desktop folder: click OK."
+    [ "$(uname)" = "Darwin" ] && open "$VIDFOLDER" >/dev/null 2>&1 || true ;;
+  badkey)
+    note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com." ;;
+  *)
+    note "Installed. Run this installer again whenever you want to enter your license key." ;;
+esac
 echo "Done! Put your video in the \"Understand This Video\" folder on your Desktop, restart Claude Desktop / Cursor, then ask: \"Understand my latest video\"."
