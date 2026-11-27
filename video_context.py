@@ -44,6 +44,14 @@ def progress(msg):
             pass
 
 
+def space_sentences(text):
+    """Blank line between sentences, so a dialog or Claude is easy to read."""
+    text = (text or "").strip()
+    if "\n\n" in text:
+        return text
+    return re.sub(r"(?<=[.?!])[ \t]+(?=[A-Z])", "\n\n", text)
+
+
 INSTALL_HINT = (
     "ffmpeg/ffprobe not found (looked on PATH, /opt/homebrew/bin, /usr/local/bin). Install it:\n"
     "  macOS:   brew install ffmpeg\n"
@@ -210,10 +218,12 @@ def blocked_message():
         rel = os.path.relpath(p, home) if p.startswith(home) else p
         tops.add(rel.split(os.sep)[0] or p)
     names = ", ".join(sorted(tops))
-    return ("macOS has not let me open the folder (%s) yet. Look for a popup that says the AI app (Claude / Cursor) "
-            "would like to access files in your folder (it may be hidden behind other windows) and click OK or Allow, "
-            "then ask again. If you never see a popup: System Settings > Privacy & Security > Files and Folders, "
-            "and turn on that folder for Claude (or Cursor)." % names)
+    return space_sentences(
+        "macOS has not let me open the folder (%s) yet.\n\n"
+        "Look for a popup that says the AI app (Claude / Cursor) would like to access files in your folder "
+        "(it may be hidden behind other windows) and click OK or Allow, then ask again.\n\n"
+        "If you never see a popup: System Settings > Privacy & Security > Files and Folders, "
+        "and turn on that folder for Claude (or Cursor)." % names)
 
 
 # ---- Easy file finding: the "Understand This Video" folder on the Desktop -------------------
@@ -440,12 +450,14 @@ def missing_file_message(original, path):
         return "ERROR: " + bm
     vids = list_videos(15)
     if vids:
-        return ("ERROR: can't find a video called '%s'.\n  Videos I can see: %s\n  Tell the user to put the video in the "
-                "'%s' folder on their Desktop, then say 'Understand my latest video'." %
-                (original, ", ".join(os.path.basename(v[0]) for v in vids), FOLDER_NAME))
+        return space_sentences(
+            "ERROR: can't find a video called '%s'.\n\nVideos I can see: %s\n\n"
+            "Put the video in the '%s' folder on your Desktop, then say 'Understand my latest video'." %
+            (original, ", ".join(os.path.basename(v[0]) for v in vids), FOLDER_NAME))
     if not (original or "").strip():
-        return ("ERROR: no videos found. Tell the user to put a video in the '%s' folder on their Desktop "
-                "(I will create it if needed), then ask again." % FOLDER_NAME)
+        return space_sentences(
+            "ERROR: no videos found.\n\nPut a video in the '%s' folder on your Desktop "
+            "(I will create it if needed), then ask again." % FOLDER_NAME)
     msg = "ERROR: can't find the video file.\n  You gave: %s\n  Looked at: %s" % (original, path)
     parent = os.path.dirname(path)
     try:
@@ -461,7 +473,7 @@ def missing_file_message(original, path):
                 "to another folder, then try again." % parent)
     except OSError:
         msg += "\n  The folder %s doesn't exist. Check the path." % parent
-    return msg
+    return space_sentences(msg)
 
 
 def run(cmd, binary=False):
@@ -819,7 +831,7 @@ def build(a):
     a.video, a.resolved_note = resolve_source(a.video)
     source, title = a.video, os.path.basename(a.video)
     if is_url(a.video):
-        sys.exit("This plugin only processes video files on your computer. Download or export the video first, then give me the file path.")
+        sys.exit(space_sentences("This plugin only processes video files on your computer.\n\nDownload or export the video first, then put it in the Understand This Video folder on your Desktop."))
     elif not _safe_isfile(source):
         sys.exit(missing_file_message(orig_source, source))
     duration, has_video, has_audio = probe(source)

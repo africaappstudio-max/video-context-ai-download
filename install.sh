@@ -28,21 +28,42 @@ ask_key() {  # pop-up box on macOS, Terminal prompt otherwise. Key is never writ
     printf '%s\n' "$K"
   fi
 }
-note() {
-  # $1 is paragraphs separated by blank lines. On a Mac each paragraph is shown with a blank line between.
-  [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1 || return 0
-  osascript - "$1" <<'APPLESCRIPT' >/dev/null 2>&1 || true
-on run argv
-  set raw to item 1 of argv
-  set AppleScript's text item delimiters to linefeed
-  set bits to text items of raw
-  set AppleScript's text item delimiters to return
-  set body to bits as text
-  display dialog body with title "Understand This Video Plugin" buttons {"OK"} default button "OK"
-end run
-APPLESCRIPT
+# Show a Mac dialog. Paragraphs (blank lines) or sentences become their own paragraph
+# with a blank line between, using AppleScript "return & return" (argv newlines get lost).
+as_esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+as_body() {
+  local text="$1" body="" sep="" para="" line chunk
+  # If the text has no blank lines, split into sentences (". " / "? " / "! " before a capital).
+  # (Do not use grep for blank lines: a pattern with a newline is treated as an empty pattern.)
+  case "$text" in
+    *$'\n\n'*) ;;
+    *) text="$(printf '%s' "$text" | sed -E 's/([.?!])[ \t]+([A-Z])/\1\n\n\2/g')" ;;
+  esac
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ -z "$line" ]; then
+      if [ -n "$para" ]; then
+        body="${body}${sep}\"$(as_esc "$para")\""
+        sep=" & return & return & "
+        para=""
+      fi
+    else
+      if [ -n "$para" ]; then para="$para $line"; else para="$line"; fi
+    fi
+  done <<EOF
+$text
+EOF
+  if [ -n "$para" ]; then
+    body="${body}${sep}\"$(as_esc "$para")\""
+  fi
+  printf '%s' "$body"
 }
-
+note() {
+  [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1 || return 0
+  local body
+  body="$(as_body "$1")"
+  [ -n "$body" ] || return 0
+  osascript -e "display dialog $body with title \"Understand This Video Plugin\" buttons {\"OK\"} default button \"OK\"" >/dev/null 2>&1 || true
+}
 if [ "$(uname)" = "Darwin" ]; then
   if ! command -v ffmpeg >/dev/null 2>&1; then
     if ! command -v brew >/dev/null 2>&1; then
@@ -62,7 +83,7 @@ else
 fi
 
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' || {
-  note "Python 3.9 or newer is needed and could not be installed. Please email video@shipmonthly.com."; exit 1; }
+  note $'Python 3.9 or newer is needed and could not be installed.\n\nPlease email video@shipmonthly.com.'; exit 1; }
 
 echo "Installing the plugin into $APP ..."
 python3 -m venv "$APP"
@@ -81,7 +102,9 @@ RESULT=""
 if [ -n "$KEY" ]; then
   if "$APP/bin/understand-this-video" activate "$KEY"; then RESULT="ok"; else RESULT="badkey"; fi
 else
-  echo "You skipped the license key. The plugin is installed, but it will not work until you run this installer again and paste the key from your purchase email."
+  echo "You skipped the license key."
+  echo
+  echo "The plugin is installed, but it will not work until you run this installer again and paste the key from your purchase email."
   RESULT="nokey"
 fi
 
@@ -89,7 +112,9 @@ fi
 echo ""
 echo "Checking the speech models..."
 if ! "$APP/bin/understand-this-video" --warmup; then
-  echo "Some downloads did not finish. The plugin will finish them the first time you use it (it will just be slower once)."
+  echo "Some downloads did not finish."
+  echo
+  echo "The plugin will finish them the first time you use it (it will just be slower once)."
 fi
 
 case "$RESULT" in

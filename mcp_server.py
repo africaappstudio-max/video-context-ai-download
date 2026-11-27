@@ -65,7 +65,7 @@ TOOLS = [{
 
 
 def _err(text):
-    return {"isError": True, "content": [{"type": "text", "text": text.strip()}]}
+    return {"isError": True, "content": [{"type": "text", "text": vc.space_sentences(text)}]}
 
 
 def list_videos_tool(args=None):
@@ -164,10 +164,11 @@ def run_tool(name, args, progress_cb=None):
         except Exception:
             pass
         if name == "list_videos":
-            return _err("Listing videos took longer than %d seconds and was stopped. %s" % (secs, bm or
-                        "Check that the 'Understand This Video' folder on the Desktop opens in Finder/Explorer, then try again."))
-        return _err("Understand This Video was stopped after %d minutes without finishing. %s Try a shorter video, or "
-                    "ask for 'transcript only'. If this keeps happening, email video@shipmonthly.com." % (secs // 60, bm))
+            return _err("Listing videos took longer than %d seconds and was stopped.\n\n%s" % (secs, bm or
+                        "Check that the 'Understand This Video' folder on the Desktop opens in Finder or Explorer, then try again."))
+        return _err("Understand This Video was stopped after %d minutes without finishing.\n\n%s\n\n"
+                    "Try a shorter video, or ask for 'transcript only'.\n\n"
+                    "If this keeps happening, email video@shipmonthly.com." % (secs // 60, (bm or "").strip()))
     return box.get("res") or _err("Understand This Video returned nothing.")
 
 
@@ -176,7 +177,7 @@ def handle(msg):
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.6"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.7"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":

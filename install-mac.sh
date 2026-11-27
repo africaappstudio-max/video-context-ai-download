@@ -5,10 +5,36 @@
 set -euo pipefail
 
 say() { printf '%s\n' "$*"; }
+as_esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+as_body() {
+  local text="$1" body="" sep="" para="" line
+  case "$text" in
+    *$'\n\n'*) ;;
+    *) text="$(printf '%s' "$text" | sed -E 's/([.?!])[ \t]+([A-Z])/\1\n\n\2/g')" ;;
+  esac
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ -z "$line" ]; then
+      if [ -n "$para" ]; then
+        body="${body}${sep}\"$(as_esc "$para")\""
+        sep=" & return & return & "
+        para=""
+      fi
+    else
+      if [ -n "$para" ]; then para="$para $line"; else para="$line"; fi
+    fi
+  done <<EOF
+$text
+EOF
+  if [ -n "$para" ]; then
+    body="${body}${sep}\"$(as_esc "$para")\""
+  fi
+  printf '%s' "$body"
+}
 fail() {
   say "$*" >&2
   if [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1; then
-    osascript -e 'display dialog "Could not finish installing Understand This Video Plugin. Check your internet and try again, or email video@shipmonthly.com." with title "Understand This Video Plugin" buttons {"OK"} default button "OK"' >/dev/null 2>&1 || true
+    body="$(as_body "$1")"
+    [ -n "$body" ] && osascript -e "display dialog $body with title \"Understand This Video Plugin\" buttons {\"OK\"} default button \"OK\"" >/dev/null 2>&1 || true
   fi
   exit 1
 }
@@ -35,8 +61,10 @@ cd "$DEST"
 
 say ""
 say "Understand This Video Plugin"
-say "Installing. The first time, this also downloads the speech models (about 600 MB) so your first video is fast."
-say "If you have installed before, that download is skipped. Please leave this window open."
+say "Installing."
+say "The first time, this also downloads the speech models (about 600 MB) so your first video is fast."
+say "If you have installed before, that download is skipped."
+say "Please leave this window open."
 say ""
 say "Downloading the plugin..."
 TMP="$DEST/plugin.zip"
@@ -64,7 +92,8 @@ fi
 
 say "Installing (the first time this also downloads the speech models; later runs are quicker)..."
 if [ "$OS" = "Darwin" ]; then
-  say "A box will pop up near the end and ask for your license key. Paste it and click OK."
+  say "A box will pop up near the end and ask for your license key."
+  say "Paste it and click OK."
 else
   say "When asked, paste your license key and press Enter."
 fi

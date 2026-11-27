@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import platform
 import socket
 import sys
@@ -38,8 +39,17 @@ OFFLINE_GRACE_DAYS = 14
 CACHE = Path(os.environ.get("VC_LICENSE_DIR", str(Path.home() / ".video-context"))) / "license.json"
 
 
+def space_sentences(text):
+    """Blank line between sentences, so a dialog or Claude is easy to read."""
+    text = (text or "").strip()
+    if "\n\n" in text:
+        return text
+    return re.sub(r"(?<=[.?!])[ \t]+(?=[A-Z])", "\n\n", text)
+
+
 class LicenseError(Exception):
-    pass
+    def __init__(self, msg=""):
+        super().__init__(space_sentences(msg))
 
 
 def _machine_id():
@@ -193,11 +203,11 @@ def require_license():
     if d is None or (env_key and env_key != d.get("key")):
         if not env_key:
             raise LicenseError(
-                "Understand This Video isn't activated yet. "
-                "Paste this line into Terminal (Mac) to add your license key: "
-                "curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash. "
-                "On Windows, run the installer again. "
-                "Your key is in your purchase email. "
+                "Understand This Video isn't activated yet.\n\n"
+                "Paste this line into Terminal (Mac) to add your license key:\n\n"
+                "curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash\n\n"
+                "On Windows, run the installer again.\n\n"
+                "Your key is in your purchase email.\n\n"
                 "No key yet? Get one at https://understandvideo.shipmonthly.com"
             )
         activate(env_key)
