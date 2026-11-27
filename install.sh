@@ -49,6 +49,9 @@ python3 -m venv "$APP"
 "$APP/bin/pip" install -q --upgrade pip
 "$APP/bin/pip" install -q "$HERE[all]"
 
+VIDFOLDER="$HOME/Desktop/Understand This Video"
+mkdir -p "$VIDFOLDER" 2>/dev/null || true
+
 echo "Connecting your AI apps..."
 "$APP/bin/python" "$HERE/register_mcp.py" "$APP/bin/understand-this-video-mcp"
 
@@ -56,7 +59,8 @@ KEY="${VIDEO_CONTEXT_LICENSE_KEY:-}"
 [ -n "$KEY" ] || KEY="$(ask_key)"
 if [ -n "$KEY" ]; then
   if "$APP/bin/understand-this-video" activate "$KEY"; then
-    note "All set! Quit and reopen your AI app (Claude, Cursor...), then ask: Understand this video for me: ~/Desktop/My Video.mp4"
+    note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then quit and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video"
+    [ "$(uname)" = "Darwin" ] && open "$VIDFOLDER" >/dev/null 2>&1 || true
   else
     note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com."
   fi
@@ -64,4 +68,4 @@ else
   echo "Later, activate with: $APP/bin/understand-this-video activate YOUR-KEY"
   note "Installed. Run this installer again whenever you want to enter your license key."
 fi
-echo "Done! Restart Claude Desktop / Cursor, then ask: \"Understand this video for me: ~/Desktop/My Video.mp4\"."
+echo "Done! Put your video in the \"Understand This Video\" folder on your Desktop, restart Claude Desktop / Cursor, then ask: \"Understand my latest video\"."

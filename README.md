@@ -9,7 +9,7 @@
 - one **contact-sheet image** with all frames in a grid
 - one `context.md` timeline mixing what was shown and what was said
 
-Everything runs **100% on your computer**. Your videos never leave it. This plugin only processes local video files. It does not download videos from the internet. If you have a video online, download or export it first, then give the plugin the file path.
+Everything runs **100% on your computer**. Your videos never leave it. This plugin only processes local video files. It does not download videos from the internet. If you have a video online, download or export it first, then put it in the Understand This Video folder on your Desktop.
 
 ## Price
 **$49 one-time. Lifetime license, up to 3 of your devices.** No subscription.
@@ -40,7 +40,7 @@ curl -fsSL https://understandvideo.shipmonthly.com/install.sh | bash
 2. If a blue box says "Windows protected your PC", click **More info**, then **Run anyway**.
 3. Paste your license key in the box that pops up and click OK.
 
-Then quit and reopen your AI app. Claude Desktop, Cursor, Claude Code, Windsurf and Gemini CLI are already connected. Ask: `Understand this video for me: ~/Desktop/My Video.mp4`.
+Then quit and reopen your AI app. Claude Desktop, Cursor, Claude Code, Windsurf and Gemini CLI are already connected. The installer puts a folder called **Understand This Video** on your Desktop. Drop your video in it, then ask: `Understand my latest video` (or `Understand My Video.mp4`).
 
 The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-context\app`). Details for each app are below and on the [help page](https://understandvideo.shipmonthly.com/help.html). An install log is saved at `~/.video-context/install.log`.
 
@@ -53,7 +53,7 @@ The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-c
 ### Claude Desktop
 1. Run the installer above (it registers Claude Desktop for you).
 2. Fully quit Claude Desktop (Mac: Cmd+Q; Windows: right-click its icon in the tray, Quit) and open it again.
-3. Start a new chat and type: `Understand this video for me: ~/Desktop/My Video.mp4`. If Claude asks permission to use the plugin, click **Allow**.
+3. Put your video in the **Understand This Video** folder on your Desktop. Start a new chat and type: `Understand my latest video` (or `Understand My Video.mp4`; you never need to type a path). If Claude asks permission to use the plugin, click **Allow**.
 
 **How to check it works:** open **Settings, Developer**. "Understand This Video" should show as *running*. In chat, Claude answers using frames and quotes with times like `[00:21]`.
 
@@ -79,7 +79,7 @@ The plugin lives in `~/.video-context/app` (Windows: `C:\Users\YOURNAME\.video-c
 2. Open Terminal (Windows: PowerShell) and paste one line.
    - Mac: `claude mcp add understand-this-video -- ~/.video-context/app/bin/understand-this-video-mcp`
    - Windows: `claude mcp add understand-this-video -- "$env:USERPROFILE\.video-context\app\Scripts\understand-this-video-mcp.exe"`
-3. Start `claude` and ask: `Understand this video for me: ~/Desktop/video.mp4`.
+3. Put the video in the Understand This Video folder on your Desktop, start `claude` and ask: `Understand my latest video`.
 
 **How to check it works:** type `claude mcp list`. You should see `understand-this-video` marked **Connected**.
 
@@ -117,16 +117,16 @@ Run the installer first. Then open your app's MCP settings file and paste the sa
 ### If something goes wrong
 - *"License error"*: run `understand-this-video activate YOUR-KEY` (Mac: `~/.video-context/app/bin/understand-this-video activate YOUR-KEY`).
 - *"ffmpeg not found"*: Mac: `brew install ffmpeg`. Windows: `winget install ffmpeg`. Then restart the app.
-- *A video link is rejected*: this plugin only processes video files on your computer. Download or export the video first, then give the AI the file path.
+- *A video link is rejected*: this plugin only processes video files on your computer. Download or export the video first, put it in the Understand This Video folder on your Desktop, then ask for it by name or say "latest".
 - Still stuck? Email video@shipmonthly.com.
 
 ## Example prompts
-1. *"Watch ~/Downloads/demo.mp4 and write the step-by-step instructions it shows."*
-2. *"Summarize this video with timestamps: ~/Desktop/talk.mp4"*
-3. *"Look at this screen recording of my bug, ~/Desktop/bug.mov, and tell me what went wrong."*
+1. *"Watch demo.mp4 and write the step-by-step instructions it shows."*
+2. *"Summarize my latest video with timestamps"*
+3. *"Look at my screen recording bug.mov and tell me what went wrong."*
 
 ## Tool
-`understand_this_video`: input `source` (a local file path) plus optional options. Returns the frames as images, the transcript and the timeline. URLs are not accepted.
+`understand_this_video`: input `source` (a file name, a full path, or empty for the newest video) plus optional options; `list_videos` shows what is there. Returns the frames as images, the transcript and the timeline. URLs are not accepted.
 
 **Token-friendly defaults (v1.2.0):** up to 12 key frames, 512 px on the longest side, moderate JPEG quality. Raise them with `max_frames` and `max_side` when you need more detail.
 **Transcript-only mode:** set `transcript_only: true` (CLI: `--transcript-only`) for the speech transcript with no frames or images. It is the cheapest option for talks, calls and lectures.

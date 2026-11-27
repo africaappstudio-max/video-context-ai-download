@@ -6,9 +6,9 @@ description: Let an AI "watch" a video. Turns a local video file on the user's c
 # Understand This Video Plugin
 
 ## When to use
-- The user gives a local video file path and asks about its contents (summary, steps, bugs, Q&A).
+- The user names a video file (or says "my latest video") and asks about its contents (summary, steps, bugs, Q&A).
 - Your model reads images and text but not video.
-- If the user gives a video URL, tell them this plugin only processes video files on their computer. They should download or export the video first, then give you the file path.
+- If the user gives a video URL, tell them this plugin only processes video files on their computer. They should download or export the video first, then put it in the Understand This Video folder on their Desktop.
 
 ## Requirements
 - An Understand This Video license (activated once by the installer, or `understand-this-video activate KEY`).
@@ -38,6 +38,6 @@ Answer from both visuals and speech, citing timestamps. If there's no transcript
 exists, transcribe it with whatever tool you have.
 
 ## MCP
-`understand-this-video-mcp` (or `python mcp_server.py`) is a stdio MCP server with one tool,
-`understand_this_video(source, out?, max_frames?, transcript?, include_images?)`.
-`source` must be a path like `~/Desktop/My Video.mp4` (spaces fine, no quotes). URLs are not accepted.
+`understand-this-video-mcp` (or `python mcp_server.py`) is a stdio MCP server with two tools,
+`list_videos()` and `understand_this_video(source?, out?, max_frames?, transcript?, include_images?)`.
+`source` can be just a file name (`My Video.mp4`, any capitals, part of the name is fine), a full path, or empty for the newest video in the user's `Understand This Video` Desktop folder (then Desktop, Downloads, Movies/Videos). Never ask the user for a path. `list_videos` shows what is there. URLs and chat attachments are not accepted.

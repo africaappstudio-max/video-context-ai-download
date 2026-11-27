@@ -38,6 +38,10 @@ Write-Host "Installing the plugin into $App ..."
 
 $ff = Get-Command ffmpeg -ErrorAction SilentlyContinue
 if ($ff) { $env:Path = (Split-Path $ff.Source) + ";" + $env:Path }
+$Desk = [Environment]::GetFolderPath("Desktop")
+if (-not $Desk) { $Desk = Join-Path $env:USERPROFILE "Desktop" }
+$VidFolder = Join-Path $Desk "Understand This Video"
+New-Item -ItemType Directory -Force $VidFolder | Out-Null
 Write-Host "Connecting your AI apps..."
 & "$App\Scripts\python.exe" "$Here\register_mcp.py" "$App\Scripts\understand-this-video-mcp.exe"
 
@@ -45,7 +49,7 @@ $Key = $env:VIDEO_CONTEXT_LICENSE_KEY
 if (-not $Key) { $Key = [Microsoft.VisualBasic.Interaction]::InputBox("Paste your license key (it is in your purchase email) and click OK.`nNo key yet? Click Cancel and run this installer again later.", $Title, "") }
 if ($Key) {
   & "$App\Scripts\understand-this-video.exe" activate $Key.Trim()
-  if ($LASTEXITCODE -eq 0) { Note "All set! Close and reopen your AI app (Claude, Cursor...), then ask: Understand this video for me: C:\Users\you\Desktop\My Video.mp4" }
+  if ($LASTEXITCODE -eq 0) { Note "All set! A folder called Understand This Video is now on your Desktop. Put your video in it. Then close and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video"; Start-Process explorer.exe $VidFolder }
   else { Note "The license key was not accepted. Check it and run this installer again, or email video@shipmonthly.com." }
 } else { Note "Installed. Run this installer again whenever you want to enter your license key." }
 } catch { Note ("Something went wrong: " + $_.Exception.Message + "`nDetails: %USERPROFILE%\.video-context\install.log. Email video@shipmonthly.com for help."); exit 1 }

@@ -4,6 +4,7 @@
 Tools:
   understand_this_video(source, out?, max_frames?, transcript?, include_images?)
       -> context.md text (+ contact-sheet image) and output folder path.
+  list_videos() -> the videos it can see (Understand This Video folder on the Desktop first).
   (The old name "video_context" is still accepted as a hidden alias.)
 Register e.g.:  claude mcp add "Understand This Video" -- understand-this-video-mcp
 """
@@ -25,14 +26,19 @@ HIDDEN_ALIASES = ("video_context",)  # old name; still callable, never listed
 TOOLS = [{
     "name": "understand_this_video",
     "title": "Understand This Video",
-    "description": ("Understand This Video: lets the AI watch AND hear a local video file: extracts timestamped key frames, a transcript "
-                    "(local Whisper) and a contact-sheet image from a file path on your computer. "
-                    "It does not download videos from the internet. Returns a timeline "
-                    "(context.md) plus the overview image; individual frames are on disk."),
+    "description": ("Understand This Video: lets the AI watch AND hear a video file on the user's computer: extracts timestamped key frames, "
+                    "a transcript (local Whisper) and a contact-sheet image. "
+                    "HOW TO FIND THE FILE: the user keeps videos in the 'Understand This Video' folder on their Desktop. "
+                    "Pass just the file NAME as 'source' (e.g. 'My Video.mp4', or even part of the name; capitals and the extension "
+                    "don't matter), or a full path if they gave one. If the user says 'my latest/newest/last video' or doesn't name a "
+                    "file, leave 'source' empty and the newest video is used. NEVER ask the user for a file path: call list_videos "
+                    "if you are unsure which files exist. Files attached to the chat cannot be used; tell the user to put the video in "
+                    "the 'Understand This Video' folder on their Desktop. It does not download videos from links. "
+                    "Returns a timeline (context.md) plus the overview image; individual frames are on disk."),
     "inputSchema": {
         "type": "object",
         "properties": {
-            "source": {"type": "string", "description": "Local video file path (e.g. ~/Desktop/My Video.mp4; spaces fine, no quotes needed). URLs are not accepted."},
+            "source": {"type": "string", "description": "Video file NAME (e.g. 'My Video.mp4' or part of it) from the user's 'Understand This Video' Desktop folder, or a full path. Leave empty for the newest video. Links are not accepted."},
             "out": {"type": "string", "description": "Output folder (default: temp dir)"},
             "max_frames": {"type": "integer", "default": 12, "description": "Max key frames (default 12; raise for more detail, costs more tokens)"},
             "max_side": {"type": "integer", "default": 512, "description": "Longest frame side in px (default 512)"},
@@ -42,13 +48,33 @@ TOOLS = [{
             "include_images": {"type": "boolean", "default": True,
                                "description": "Return contact sheet image inline"},
         },
-        "required": ["source"],
+        "required": [],
     },
+}, {
+    "name": "list_videos",
+    "title": "List my videos",
+    "description": ("List the videos on the user's computer that Understand This Video can read: first the ones in their "
+                    "'Understand This Video' Desktop folder (newest first), then recent videos on the Desktop, Downloads, "
+                    "Movies/Videos. Use it to see what is there or to pick the right file name. Creates the folder if it is missing."),
+    "inputSchema": {"type": "object", "properties": {}, "required": []},
 }]
 
 
 def _err(text):
     return {"isError": True, "content": [{"type": "text", "text": text.strip()}]}
+
+
+def list_videos_tool():
+    folder = vc.ensure_inbox()
+    vids = vc.list_videos(30)
+    lines = ["Understand This Video folder: %s" % (folder or "(could not create it on the Desktop)")]
+    if not vids:
+        lines.append("No videos found yet. Ask the user to put a video in that folder (drag it in from anywhere), then ask again.")
+    for p, size, mt in vids:
+        import datetime
+        lines.append("- %s  (%.1f MB, %s)  %s" % (os.path.basename(p), size / 1048576.0,
+                     datetime.datetime.fromtimestamp(mt).strftime("%Y-%m-%d %H:%M"), os.path.dirname(p)))
+    return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
 def call_tool(args):
@@ -57,11 +83,9 @@ def call_tool(args):
         licensing.require_license()
     except licensing.LicenseError as e:
         return {"isError": True, "content": [{"type": "text", "text": "License error: %s" % e}]}
-    src = args.get("source")
-    if not src or not str(src).strip():
-        return _err("Understand This Video: no video given. Pass a local file path as 'source'.")
+    src = str(args.get("source") or "").strip()
     out = os.path.expanduser(args.get("out") or "") or tempfile.mkdtemp(prefix="understand_this_video_")
-    argv = [str(src), "--scene", "--out", out,
+    argv = ([src] if src else []) + ["--scene", "--out", out,
             "--max-frames", str(int(args.get("max_frames", 12))),
             "--max-side", str(int(args.get("max_side", 512)))]
     if args.get("transcript_only"):
@@ -69,16 +93,19 @@ def call_tool(args):
     if not args.get("transcript", True):
         argv.append("--no-transcript")
     log = io.StringIO()
+    parsed = vc.make_parser().parse_args(argv)
     try:
         with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
-            vc.build(vc.make_parser().parse_args(argv))
+            vc.build(parsed)
     except SystemExit as e:
         detail = e.code if isinstance(e.code, str) else "exit code %s" % e.code
         return _err("Understand This Video failed: %s\n%s" % (detail, log.getvalue()[-1500:]))
     except Exception as e:
         return _err("Understand This Video error: %s\n%s" % (e, log.getvalue()[-1500:]))
     ctx = (Path(out) / "context.md").read_text(encoding="utf-8")
-    content = [{"type": "text", "text": "Output folder: %s\n\n%s" % (os.path.abspath(out), ctx)}]
+    note = getattr(parsed, "resolved_note", "")
+    head = ("%s: %s\n" % (note, parsed.video)) if note else ""
+    content = [{"type": "text", "text": "%sOutput folder: %s\n\n%s" % (head, os.path.abspath(out), ctx)}]
     sheet = Path(out) / "contact_sheet.jpg"
     if args.get("include_images", True) and sheet.exists():
         content.append({"type": "image", "mimeType": "image/jpeg",
@@ -91,14 +118,17 @@ def handle(msg):
     if method == "initialize":
         res = {"protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL),
                "capabilities": {"tools": {}},
-               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.2"}}
+               "serverInfo": {"name": "understand-this-video", "title": "Understand This Video Plugin", "version": "1.2.3"}}
     elif method == "tools/list":
         res = {"tools": TOOLS}
     elif method == "tools/call":
         p = msg.get("params", {})
-        if p.get("name") not in (TOOL_NAME,) + HIDDEN_ALIASES:
+        if p.get("name") == "list_videos":
+            res = list_videos_tool()
+        elif p.get("name") not in (TOOL_NAME,) + HIDDEN_ALIASES:
             return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": "unknown tool"}}
-        res = call_tool(p.get("arguments", {}))
+        else:
+            res = call_tool(p.get("arguments", {}))
     elif method == "ping":
         res = {}
     elif mid is None:  # notification

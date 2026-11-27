@@ -80,7 +80,171 @@ def normalize_source(src):
     return os.path.normpath(s)
 
 
+# ---- Easy file finding: the "Understand This Video" folder on the Desktop -------------------
+FOLDER_NAME = "Understand This Video"
+VIDEO_EXTS = (".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wmv", ".flv", ".mpg", ".mpeg", ".3gp", ".ts", ".mts", ".m2ts")
+LATEST_WORDS = {"", "latest", "newest", "last", "recent", "newest video", "latest video", "last video",
+                "my latest video", "my newest video", "latest one", "newest one", "the latest", "the newest", "my last video", "most recent",
+                "most recent video", "the latest video", "the newest video", "my most recent video"}
+GENERIC_WORDS = {"video", "my video", "the video", "this video", "a video", "it", "this", "that", "that video", "my videos", "the file", "my file"}
+
+
+def desktop_dirs():
+    """Every Desktop folder that exists (handles OneDrive-redirected Desktops on Windows)."""
+    home = os.path.expanduser("~")
+    cands = [os.path.join(home, "Desktop")]
+    for var in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+        v = os.environ.get(var)
+        if v:
+            cands.append(os.path.join(v, "Desktop"))
+    try:
+        for n in sorted(os.listdir(home)):
+            if n.lower().startswith("onedrive"):
+                cands.append(os.path.join(home, n, "Desktop"))
+    except OSError:
+        pass
+    out = []
+    for c in cands:
+        if os.path.isdir(c) and c not in out:
+            out.append(c)
+    return out
+
+
+def inbox_dirs():
+    """The Understand This Video folder(s), wherever the Desktop really is."""
+    return [os.path.join(d, FOLDER_NAME) for d in desktop_dirs() if os.path.isdir(os.path.join(d, FOLDER_NAME))]
+
+
+def ensure_inbox():
+    """Create the Understand This Video folder on the Desktop if it is missing. Returns its path or ''."""
+    existing = inbox_dirs()
+    if existing:
+        return existing[0]
+    for d in desktop_dirs():
+        p = os.path.join(d, FOLDER_NAME)
+        try:
+            os.makedirs(p, exist_ok=True)
+            return p
+        except OSError:
+            continue
+    return ""
+
+
+def search_dirs():
+    """Folders searched for a video, best first."""
+    home = os.path.expanduser("~")
+    dirs = list(inbox_dirs()) + desktop_dirs() + [os.path.join(home, n) for n in ("Downloads", "Movies", "Videos", "Documents")]
+    out = []
+    for d in dirs:
+        if os.path.isdir(d) and d not in out:
+            out.append(d)
+    return out
+
+
+def _videos_in(d):
+    try:
+        names = os.listdir(d)
+    except OSError:
+        return []
+    res = []
+    for n in names:
+        p = os.path.join(d, n)
+        if not n.startswith(".") and os.path.splitext(n)[1].lower() in VIDEO_EXTS and os.path.isfile(p):
+            try:
+                res.append((os.path.getmtime(p), p))
+            except OSError:
+                pass
+    res.sort(reverse=True)
+    return [p for _, p in res]
+
+
+def list_videos(limit=30):
+    """[(path, size_bytes, mtime)] newest first: the inbox folder first, then Desktop/Downloads/etc."""
+    seen, out = set(), []
+    for d in search_dirs():
+        for p in _videos_in(d):
+            if p not in seen:
+                seen.add(p)
+                try:
+                    st = os.stat(p)
+                    out.append((p, st.st_size, st.st_mtime))
+                except OSError:
+                    pass
+    inbox = [x for x in out if os.path.dirname(x[0]) in inbox_dirs()]
+    rest = [x for x in out if x not in inbox]
+    return (inbox + rest)[:limit]
+
+
+def _norm_name(n):
+    return re.sub(r"[^a-z0-9]+", " ", n.lower()).strip()
+
+
+def resolve_source(src):
+    """Turn what the user/AI typed into a real video file.
+    Returns (path_or_url, note). Accepts a full path, a bare file name (any case, with or without the
+    extension, or just part of the name), or nothing / 'latest' for the newest video."""
+    raw = (src or "").strip()
+    cleaned = raw
+    while len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in "\"'`":
+        cleaned = cleaned[1:-1].strip()
+    if is_url(cleaned):
+        return cleaned, ""
+    if _norm_name(cleaned) in LATEST_WORDS:
+        for d in search_dirs():
+            vids = _videos_in(d)
+            if vids:
+                where = "your Understand This Video folder" if os.path.dirname(vids[0]) in inbox_dirs() else d
+                return vids[0], "Newest video in %s" % where
+        return "", ""
+    # 1. exactly what was given (full path, ~, relative to home, etc.)
+    p = normalize_source(cleaned)
+    if os.path.isfile(p):
+        return p, ""
+    # 2. look the NAME up in the usual folders (inbox first), case-insensitive, partial match
+    base = os.path.basename(cleaned.replace("\\", "/").rstrip("/")) or cleaned
+    want = _norm_name(base)
+    want_stem = _norm_name(os.path.splitext(base)[0])
+    tiers = ([], [], [], [])
+    for d in search_dirs():
+        for v in _videos_in(d):
+            n = os.path.basename(v)
+            nn, ns = _norm_name(n), _norm_name(os.path.splitext(n)[0])
+            if nn == want or ns == want_stem:
+                tiers[0].append(v)
+            elif want_stem and (ns.startswith(want_stem) or want_stem.startswith(ns) and ns):
+                tiers[1].append(v)
+            elif want_stem and want_stem in ns:
+                tiers[2].append(v)
+            elif want_stem and all(tok in nn for tok in _norm_name(base).split()):
+                tiers[3].append(v)
+    for t in tiers:
+        if t:
+            # keep folder priority: first hit in the best folder; same-folder ties -> newest first (list order)
+            best = t[0]
+            others = [os.path.basename(x) for x in t[1:4]]
+            note = "Matched your words to %s" % best
+            if others:
+                note += " (other possible matches: %s)" % ", ".join(others)
+            return best, note
+    # nothing matched by name: "Understand my latest video", "the video", ... -> newest video
+    if re.search(r"\b(latest|newest|last|recent)\b", cleaned.lower()) or _norm_name(cleaned) in GENERIC_WORDS:
+        for d in search_dirs():
+            vids = _videos_in(d)
+            if vids:
+                where = "your Understand This Video folder" if os.path.dirname(vids[0]) in inbox_dirs() else d
+                return vids[0], "Newest video in %s" % where
+    return p, ""
+
+
 def missing_file_message(original, path):
+    vids = list_videos(15)
+    if vids:
+        return ("ERROR: can't find a video called '%s'.\n  Videos I can see: %s\n  Tell the user to put the video in the "
+                "'%s' folder on their Desktop, then say 'Understand my latest video'." %
+                (original, ", ".join(os.path.basename(v[0]) for v in vids), FOLDER_NAME))
+    if not (original or "").strip():
+        return ("ERROR: no videos found. Tell the user to put a video in the '%s' folder on their Desktop "
+                "(I will create it if needed), then ask again." % FOLDER_NAME)
     msg = "ERROR: can't find the video file.\n  You gave: %s\n  Looked at: %s" % (original, path)
     parent = os.path.dirname(path)
     try:
@@ -299,7 +463,9 @@ def make_parser():
     ap = argparse.ArgumentParser(prog="understand-this-video",
                                  description="Understand This Video Plugin: turn a video "
                                              "into timestamped key frames + transcript for AI agents")
-    ap.add_argument("video", help="local video file path")
+    ap.add_argument("video", nargs="?", default="",
+                    help="video file: full path, or just its name, or leave empty / say 'latest' for the newest video "
+                         "in the 'Understand This Video' folder on your Desktop")
     ap.add_argument("--out", default="understand_this_video_output")
     ap.add_argument("--scene", action="store_true", help="scene detection (+interval fill if too few)")
     ap.add_argument("--threshold", type=float, default=0.3, help="scene threshold 0-1")
@@ -325,7 +491,8 @@ def build(a):
     orig_source = a.video
     out = Path(os.path.expanduser(a.out))
     out.mkdir(parents=True, exist_ok=True)
-    a.video = normalize_source(a.video)
+    ensure_inbox()
+    a.video, a.resolved_note = resolve_source(a.video)
     source, title = a.video, os.path.basename(a.video)
     if is_url(a.video):
         sys.exit("This plugin only processes video files on your computer. Download or export the video first, then give me the file path.")
