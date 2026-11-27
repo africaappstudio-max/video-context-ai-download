@@ -54,8 +54,10 @@ Write-Host "Connecting your AI apps..."
 $Key = $env:VIDEO_CONTEXT_LICENSE_KEY
 if (-not $Key) { $Key = [Microsoft.VisualBasic.Interaction]::InputBox("Paste your license key (it is in your purchase email) and click OK.`r`n`r`nThe plugin will not work without your license key.`r`n`r`nNo key yet? Click Cancel, then run this installer again when you have it.", $Title, "") }
 $Result = "nokey"
+$ACT_MSG = ""
 if ($Key) {
-  & "$App\Scripts\understand-this-video.exe" activate $Key.Trim()
+  $ACT_MSG = & "$App\Scripts\understand-this-video.exe" activate $Key.Trim() 2>&1 | Out-String
+  Write-Host $ACT_MSG
   if ($LASTEXITCODE -eq 0) { $Result = "ok" } else { $Result = "badkey" }
 }
 
@@ -66,6 +68,6 @@ Write-Host "Checking the speech models..."
 if ($LASTEXITCODE -ne 0) { Write-Host "Some downloads did not finish."; Write-Host ""; Write-Host "The plugin will finish them the first time you use it (it will just be slower once)." }
 
 if ($Result -eq "ok") { Note "All set!`r`n`r`nA folder called Understand This Video is now on your Desktop.`r`n`r`nPut your video in it.`r`n`r`nThen close and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video"; Start-Process explorer.exe $VidFolder }
-elseif ($Result -eq "badkey") { Note "The license key was not accepted.`r`n`r`nThe plugin will not work without a valid key.`r`n`r`nCheck the key in your purchase email and run this installer again, or email video@shipmonthly.com." }
+elseif ($Result -eq "badkey") { Note ("The license key was not accepted.`r`n`r`n" + $ACT_MSG.Trim() + "`r`n`r`nThe plugin will not work without a valid key.`r`n`r`nIf this key has already been used on the maximum number of computers, deactivate it on one you no longer use, or email video@shipmonthly.com.") }
 else { Note "The plugin is installed, but it is not activated yet because you skipped the license key.`r`n`r`nThe plugin will not work without it.`r`n`r`nRun this installer again and paste the key from your purchase email.`r`n`r`nThen close and reopen your AI app.`r`n`r`nNo key yet? Get one at https://understandvideo.shipmonthly.com" }
 } catch { Note ("Something went wrong: " + $_.Exception.Message + "`r`n`r`nDetails: %USERPROFILE%\.video-context\install.log.`r`n`r`nEmail video@shipmonthly.com for help."); exit 1 }

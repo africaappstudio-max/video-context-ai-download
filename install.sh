@@ -100,7 +100,12 @@ KEY="${VIDEO_CONTEXT_LICENSE_KEY:-}"
 [ -n "$KEY" ] || KEY="$(ask_key)"
 RESULT=""
 if [ -n "$KEY" ]; then
-  if "$APP/bin/understand-this-video" activate "$KEY"; then RESULT="ok"; else RESULT="badkey"; fi
+  set +e
+  ACT_MSG="$("$APP/bin/understand-this-video" activate "$KEY" 2>&1)"
+  ACT_RC=$?
+  set -e
+  printf '%s\n' "$ACT_MSG"
+  if [ "$ACT_RC" -eq 0 ]; then RESULT="ok"; else RESULT="badkey"; fi
 else
   echo "You skipped the license key."
   echo
@@ -122,7 +127,7 @@ case "$RESULT" in
     note $'All set!\n\nA folder called Understand This Video is now on your Desktop.\n\nPut your video in it.\n\nThen quit and reopen your AI app (Claude, Cursor...) and ask: Understand my latest video.\n\nThe first time, your Mac may ask if Claude can access your Desktop folder: click OK.' 
     [ "$(uname)" = "Darwin" ] && open "$VIDFOLDER" >/dev/null 2>&1 || true ;;
   badkey)
-    note $'The license key was not accepted.\n\nThe plugin will not work without a valid key.\n\nCheck the key in your purchase email and run this installer again, or email video@shipmonthly.com.'  ;;
+    note $'The license key was not accepted.\n\n'"${ACT_MSG}"$'\n\nThe plugin will not work without a valid key.\n\nIf this key has already been used on the maximum number of computers, deactivate it on one you no longer use, or email video@shipmonthly.com.'  ;;
   *)
     note $'The plugin is installed, but it is not activated yet because you skipped the license key.\n\nThe plugin will not work without it.\n\nRun this installer again and paste the key from your purchase email.\n\nThen quit and reopen your AI app.\n\nNo key yet? Get one at https://understandvideo.shipmonthly.com'  ;;
 esac

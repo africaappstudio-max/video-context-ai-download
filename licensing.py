@@ -48,13 +48,33 @@ def space_sentences(text):
 
 
 class LicenseError(Exception):
-    def __init__(self, msg=""):
+    def __init__(self, msg="", code=None, payload=None):
         super().__init__(space_sentences(msg))
+        self.code = code
+        self.payload = payload or {}
 
 
 def _machine_id():
+    """Stable per computer. Cached so a changing MAC/hostname cannot burn extra license slots."""
+    mid_path = CACHE.parent / "machine_id"
+    try:
+        mid = mid_path.read_text().strip()
+        if len(mid) >= 32:
+            return mid
+    except Exception:
+        pass
     raw = "%s|%s|%s" % (uuid.getnode(), platform.node(), platform.system())
-    return hashlib.sha256(raw.encode()).hexdigest()
+    mid = hashlib.sha256(raw.encode()).hexdigest()
+    try:
+        mid_path.parent.mkdir(parents=True, exist_ok=True)
+        mid_path.write_text(mid)
+        try:
+            os.chmod(str(mid_path), 0o600)
+        except OSError:
+            pass
+    except OSError:
+        pass
+    return mid
 
 
 def _sign(d):
@@ -122,8 +142,10 @@ def _fs(method, path, body=None, query=None):
             err = json.loads(e.read().decode())
         except Exception:
             err = {}
-        msg = (err.get("error") or {}).get("message") if isinstance(err.get("error"), dict) else err.get("error")
-        raise LicenseError(msg or "license server error %s" % e.code)
+        errinfo = err.get("error") if isinstance(err.get("error"), dict) else {}
+        msg = errinfo.get("message") if errinfo else err.get("error")
+        raise LicenseError(msg or "license server error %s" % e.code,
+                           code=errinfo.get("code"), payload=err)
 
 
 def _uid():
@@ -131,9 +153,31 @@ def _uid():
 
 
 def activate(key):
+    key = key.strip()
+    d = _load()
+    if d and d.get("key") == key and d.get("instance_id"):
+        return {"meta": {}}
     if PROVIDER == "freemius":
-        return _fs_activate(key.strip())
-    return _ls_activate(key.strip())
+        return _fs_activate(key)
+    return _ls_activate(key)
+
+
+def _save_activation(key, install_id):
+    _save({"key": key, "instance_id": str(install_id), "checked": time.time(),
+           "customer": ""})
+
+
+def _install_id_from_error(exc):
+    payload = getattr(exc, "payload", None) or {}
+    for candidate in (
+        payload.get("install_id"),
+        (payload.get("error") or {}).get("install_id") if isinstance(payload.get("error"), dict) else None,
+        (payload.get("request") or {}).get("install_id") if isinstance(payload.get("request"), dict) else None,
+    ):
+        if candidate:
+            return candidate
+    m = re.search(r"install(?:ation)?\s+#?(\d+)", str(exc), re.I)
+    return m.group(1) if m else None
 
 
 def _fs_activate(key):
@@ -143,14 +187,21 @@ def _fs_activate(key):
         r = _fs("POST", "licenses/activate.json",
                 {"uid": _uid(), "license_key": key,
                  "title": "%s (%s)" % (socket.gethostname(), platform.system())})
+    except LicenseError as e:
+        # Same computer, already activated: treat as success so reinstalls do not fail.
+        if getattr(e, "code", None) == "license_activated":
+            install_id = _install_id_from_error(e)
+            if install_id:
+                _save_activation(key, install_id)
+                return {"meta": {}}
+        raise
     except (urllib.error.URLError, socket.timeout, OSError) as e:
         raise LicenseError("can't reach the license server to activate (internet needed once): %s" % e)
     if not r.get("install_id"):
         raise LicenseError("activation failed")
     if r.get("license_plan_id") and str(r["license_plan_id"]) != str(FS_PLAN_ID):
         raise LicenseError("this key is not for Understand This Video")
-    _save({"key": key, "instance_id": str(r["install_id"]), "checked": time.time(),
-           "customer": ""})
+    _save_activation(key, r["install_id"])
     return {"meta": {}}
 
 
